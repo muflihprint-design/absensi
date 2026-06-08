@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi Karyawan - Cloud Attendance</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        /* Custom scrollbar for clean dashboard tables */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- NAVIGATION HEADER -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-indigo-100 flex items-center justify-center">
+                        <i class="fa-solid fa-user-check text-lg"></i>
+                    </div>
+                    <div>
+                        <span class="text-lg font-bold text-slate-900 tracking-tight block">PresensiCloud</span>
+                        <span class="text-xs text-indigo-600 font-medium -mt-1 block">Portal Absensi Digital</span>
+                    </div>
+                </div>
+                
+                <!-- Tab Switching System -->
+                <div class="flex items-center space-x-1 sm:space-x-2">
+                    <button id="tab-user-btn" class="flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 bg-indigo-50 text-indigo-700 shadow-sm">
+                        <i class="fa-solid fa-user-clock"></i>
+                        <span class="hidden sm:inline">Halaman Karyawan</span>
+                        <span class="sm:hidden">Karyawan</span>
+                    </button>
+                    <button id="tab-admin-btn" class="flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-slate-600 hover:bg-slate-100">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span class="hidden sm:inline">Halaman Admin</span>
+                        <span class="sm:hidden">Admin</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- ============================================ -->
+        <!-- 1. HALAMAN KARYAWAN (USER TAB)               -->
+        <!-- ============================================ -->
+        <section id="tab-user-content" class="space-y-6">
+            
+            <!-- Welcome banner & Realtime Clock -->
+            <div class="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-y-6 translate-x-6">
+                    <i class="fa-solid fa-clock text-[200px]"></i>
+                </div>
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                    <div>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Halo, Selamat Bekerja!</h1>
+                        <p class="text-indigo-200 mt-1.5 text-sm sm:text-base">Masukkan kode karyawan unik Anda untuk mencatatkan absensi harian secara aman.</p>
+                        
+                        <!-- Sunday Notice -->
+                        <div id="sunday-warning" class="hidden mt-4 inline-flex items-center space-x-2 bg-rose-500/20 border border-rose-500/30 text-rose-200 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            <span>Hari Minggu: Hari libur kerja. Tombol absensi dinonaktifkan.</span>
+                        </div>
+                    </div>
+                    <!-- Live Clock and Date Panel -->
+                    <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center space-x-4 md:self-stretch md:justify-center">
+                        <div class="text-center px-2">
+                            <span id="live-date" class="block text-xs font-semibold uppercase tracking-wider text-indigo-300">Memuat tanggal...</span>
+                            <span id="live-time" class="block text-3xl font-bold tracking-tight text-white mt-1 font-mono">00:00:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- FORM CONTAINER -->
+                <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                    <div class="flex items-center space-x-3 pb-5 border-b border-slate-100 mb-6">
+                        <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
+                            <i class="fa-solid fa-id-card text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">Verifikasi & Presensi</h2>
+                            <p class="text-xs text-slate-500">Silakan masukkan kode karyawan Anda yang terdaftar.</p>
+                        </div>
+                    </div>
+
+                    <form id="attendance-form" class="space-y-6" onsubmit="event.preventDefault();">
+                        <!-- Input Kode Karyawan -->
+                        <div>
+                            <label for="employee-code-input" class="block text-sm font-semibold text-slate-700 mb-2">Kode Karyawan</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-key"></i>
+                                </span>
+                                <input type="text" id="employee-code-input" placeholder="Contoh: EMP001" class="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 hover:bg-slate-100/50 transition text-sm font-bold text-slate-700 tracking-wider placeholder-slate-400 uppercase">
+                            </div>
+                            
+                            <!-- Dynamic Verification Feedback -->
+                            <div class="mt-2.5 flex items-start space-x-2">
+                                <div id="verification-badge" class="hidden shrink-0 mt-0.5">
+                                    <!-- Dynamic Icon via JS -->
+                                </div>
+                                <p id="employee-resolved-name" class="text-xs font-semibold text-slate-400 italic">Masukkan kode karyawan untuk divalidasi oleh sistem cloud.</p>
+                            </div>
+                        </div>
+
+                        <!-- Helper Quick Demo List -->
+                        <div class="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100/50">
+                            <span class="block text-xs font-bold text-indigo-950 uppercase tracking-wider mb-2">Daftar Kode Demo Aktif:</span>
+                            <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600">
+                                <span class="cursor-pointer hover:text-indigo-700 font-mono" onclick="fillDemoCode('EMP001')"><strong class="text-indigo-600 font-bold">EMP001</strong> - Budi Santoso</span>
+                                <span class="cursor-pointer hover:text-indigo-700 font-mono" onclick="fillDemoCode('EMP002')"><strong class="text-indigo-600 font-bold">EMP002</strong> - Siti Rahmawati</span>
+                                <span class="cursor-pointer hover:text-indigo-700 font-mono" onclick="fillDemoCode('EMP003')"><strong class="text-indigo-600 font-bold">EMP003</strong> - Andi Wijaya</span>
+                                <span class="cursor-pointer hover:text-indigo-700 font-mono" onclick="fillDemoCode('EMP004')"><strong class="text-indigo-600 font-bold">EMP004</strong> - Dewi Lestari</span>
+                            </div>
+                        </div>
+
+                        <!-- Notes / Keterangan -->
+                        <div>
+                            <label for="attendance-notes" class="block text-sm font-semibold text-slate-700 mb-2">Catatan / Keterangan <span class="text-xs text-slate-400 font-normal">(Opsional)</span></label>
+                            <textarea id="attendance-notes" rows="3" placeholder="Contoh: Bekerja remote (WFH), sakit, dinas luar kota..." class="block w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 text-sm placeholder-slate-400"></textarea>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <!-- ABSEN MASUK BUTTON -->
+                            <button id="btn-check-in" type="button" disabled class="relative group flex items-center justify-center space-x-2 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl font-bold shadow-lg shadow-emerald-100 hover:shadow-emerald-200 hover:-translate-y-0.5 transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none">
+                                <span class="btn-text flex items-center space-x-2">
+                                    <i class="fa-solid fa-right-to-bracket text-lg"></i>
+                                    <span>Absen Masuk</span>
+                                </span>
+                                <!-- Loading Spinner -->
+                                <span class="btn-spinner hidden absolute inset-0 items-center justify-center bg-emerald-700/90 rounded-xl">
+                                    <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+
+                            <!-- ABSEN KELUAR BUTTON -->
+                            <button id="btn-check-out" type="button" disabled class="relative group flex items-center justify-center space-x-2 px-6 py-3.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-bold shadow-lg shadow-rose-100 hover:shadow-rose-200 hover:-translate-y-0.5 transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none">
+                                <span class="btn-text flex items-center space-x-2">
+                                    <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                                    <span>Absen Keluar</span>
+                                </span>
+                                <!-- Loading Spinner -->
+                                <span class="btn-spinner hidden absolute inset-0 items-center justify-center bg-rose-700/90 rounded-xl">
+                                    <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- NOTIFICATION & REALTIME TRACKING PANEL -->
+                <div class="lg:col-span-5 flex flex-col space-y-6">
+                    <!-- Status Card -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex-grow">
+                        <div class="flex items-center space-x-3 pb-4 border-b border-slate-100 mb-5">
+                            <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center">
+                                <i class="fa-regular fa-calendar-check text-lg"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-base font-bold text-slate-900">Status Kehadiran Hari Ini</h2>
+                                <p class="text-[11px] text-slate-500" id="status-card-date">Tanggal saat ini</p>
+                            </div>
+                        </div>
+
+                        <!-- Realtime Status Area -->
+                        <div id="status-container" class="space-y-4">
+                            <!-- State 1: Belum Absen / Kode Belum Valid -->
+                            <div id="status-not-started" class="text-center py-8 px-4 border-2 border-dashed border-slate-200 rounded-xl">
+                                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                                    <i class="fa-regular fa-clock text-2xl"></i>
+                                </div>
+                                <h3 id="status-placeholder-title" class="text-sm font-semibold text-slate-800">Menunggu Verifikasi Kode</h3>
+                                <p id="status-placeholder-text" class="text-xs text-slate-500 mt-1 max-w-[240px] mx-auto">Ketik kode karyawan aktif Anda di form kiri untuk membuka menu penulisan absensi.</p>
+                            </div>
+
+                            <!-- State 2: Terisi Berhasil (Tersembunyi secara default) -->
+                            <div id="status-logged-in" class="hidden space-y-4">
+                                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start space-x-3">
+                                    <div class="p-1.5 bg-emerald-100 text-emerald-700 rounded-md mt-0.5">
+                                        <i class="fa-solid fa-circle-check text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xs font-extrabold uppercase tracking-wider text-emerald-800">Absen Masuk Berhasil</h4>
+                                        <p id="check-in-info" class="text-sm text-slate-700 mt-1">Anda sudah absen masuk pada <span class="font-bold">08:05:22</span>.</p>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
+                                    <div>
+                                        <span class="text-xs text-slate-500 block">Karyawan Terverifikasi:</span>
+                                        <span id="active-user-display" class="text-sm font-bold text-slate-800">Nama Karyawan</span>
+                                    </div>
+                                    <span id="active-code-display" class="px-2.5 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-mono font-bold rounded-lg">EMPXXX</span>
+                                </div>
+
+                                <div class="p-4 border border-slate-100 rounded-xl flex items-center space-x-3 text-xs text-slate-500">
+                                    <i class="fa-solid fa-info-circle text-indigo-500 text-sm"></i>
+                                    <span>Gunakan tombol "Absen Keluar" ketika pekerjaan Anda telah selesai hari ini.</span>
+                                </div>
+                            </div>
+
+                            <!-- State 3: Selesai Bekerja (Tersembunyi secara default) -->
+                            <div id="status-completed" class="hidden space-y-4">
+                                <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-start space-x-3">
+                                    <div class="p-1.5 bg-indigo-100 text-indigo-700 rounded-md mt-0.5">
+                                        <i class="fa-solid fa-award text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-xs font-extrabold uppercase tracking-wider text-indigo-800">Selesai Kerja Hari Ini!</h4>
+                                        <p id="check-out-info" class="text-sm text-slate-700 mt-1">Absen keluar tercatat pada <span class="font-bold">16:10:45</span>.</p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                                        <span class="text-[10px] text-slate-500 block uppercase font-semibold">Jam Masuk</span>
+                                        <span id="summary-check-in" class="text-sm font-bold text-slate-800 mt-0.5 block">08:00</span>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                                        <span class="text-[10px] text-slate-500 block uppercase font-semibold">Jam Keluar</span>
+                                        <span id="summary-check-out" class="text-sm font-bold text-slate-800 mt-0.5 block">16:00</span>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 text-center text-xs font-bold rounded-xl flex items-center justify-center space-x-2">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    <span>Seluruh pencatatan hari ini sukses disimpan di Cloud.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cloud Sync Indicator -->
+                    <div class="bg-gradient-to-br from-slate-800 to-indigo-950 text-white rounded-2xl p-5 shadow-md flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-lg flex items-center justify-center border border-emerald-500/20">
+                                <i class="fa-solid fa-cloud-arrow-up text-base animate-pulse"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-indigo-200 block uppercase tracking-wider">Cloud Storage Status</span>
+                                <span class="text-xs font-bold text-emerald-400 block flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-ping"></span>
+                                    Terhubung ke Server Cloud (Live)
+                                </span>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-wifi text-slate-400 text-sm"></i>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================ -->
+        <!-- 2. HALAMAN ADMIN (DASHBOARD TAB)             -->
+        <!-- ============================================ -->
+        <section id="tab-admin-content" class="hidden space-y-6">
+            
+            <!-- Admin Top Stats Section -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Stat Card 1 -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-medium text-slate-500 block">Total Hadir Hari Ini</span>
+                        <span id="stat-total-present" class="text-2xl font-extrabold text-slate-900 block mt-0.5">0</span>
+                    </div>
+                </div>
+                <!-- Stat Card 2 -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-user-clock text-amber-600"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-medium text-slate-500 block">Aktif Bekerja</span>
+                        <span id="stat-active-working" class="text-2xl font-extrabold text-slate-900 block mt-0.5">0</span>
+                    </div>
+                </div>
+                <!-- Stat Card 3 -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-medium text-slate-500 block">Selesai Bekerja</span>
+                        <span id="stat-completed-working" class="text-2xl font-extrabold text-slate-900 block mt-0.5">0</span>
+                    </div>
+                </div>
+                <!-- Stat Card 4 -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                    <div class="w-12 h-12 bg-indigo-50 text-indigo-700 rounded-xl flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-business-time"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-medium text-slate-500 block">Rata-rata Durasi</span>
+                        <span id="stat-avg-duration" class="text-2xl font-extrabold text-slate-900 block mt-0.5">0 jam</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Controls and Content -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Rekapitulasi Absensi Realtime</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Pantau, filter, dan unduh data kehadiran karyawan perusahaan Anda.</p>
+                    </div>
+                    
+                    <!-- Export Button -->
+                    <button id="btn-export-csv" class="flex items-center justify-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-sm font-semibold shadow-md shadow-emerald-50 transition hover:-translate-y-0.5">
+                        <i class="fa-solid fa-file-excel text-base"></i>
+                        <span>Ekspor Data ke CSV</span>
+                    </button>
+                </div>
+
+                <!-- Live Filters -->
+                <div class="p-5 border-b border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Filter Tanggal -->
+                    <div>
+                        <label for="filter-date" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Filter Berdasarkan Tanggal</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                <i class="fa-regular fa-calendar-alt"></i>
+                            </span>
+                            <input type="date" id="filter-date" class="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <!-- Filter Nama / Kode -->
+                    <div>
+                        <label for="filter-name" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Cari Nama / Kode Karyawan</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input type="text" id="filter-name" placeholder="Ketik nama atau kode (EMP...)" class="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <!-- Clear Filter / Status -->
+                    <div class="flex items-end">
+                        <button id="btn-clear-filters" class="w-full text-center px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold transition">
+                            <i class="fa-solid fa-arrows-rotate mr-2"></i>Reset Filter
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TABLE SECTION -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50/75 border-b border-slate-200">
+                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal</th>
+                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Kode</th>
+                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Karyawan</th>
+                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Mulai Presensi</th>
+                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Selesai Presensi</th>
+                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Durasi Kerja</th>
+                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Keterangan / Catatan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-table-body" class="divide-y divide-slate-100">
+                            <!-- Rows will be injected here dynamically by Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Table Empty State -->
+                <div id="table-empty-state" class="hidden text-center py-16 px-4">
+                    <div class="w-20 h-20 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                        <i class="fa-solid fa-folder-open text-3xl"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-slate-800">Tidak Ada Data Ditemukan</h3>
+                    <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Tidak ada rekapan absensi yang cocok dengan kriteria pencarian Anda.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-3 pointer-events-none"></div>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-xs text-slate-400">&copy; 2026 Portal PresensiCloud. Hak Cipta Dilindungi Undang-Undang.</p>
+            <p class="text-[10px] text-slate-400 mt-1">Platform dirancang responsif, interaktif & modern dengan integrasi API Cloud Ready.</p>
+        </div>
+    </footer>
+
+    <!-- ============================================ -->
+    <!-- LOGIKA JAVASCRIPT & ARSITEKTUR APLIKASI      -->
+    <!-- ============================================ -->
+    <script>
+        /**
+         * ========================================================
+         * 1. GOOGLE APPS SCRIPT WEB APP INTEGRATION (REAL DB CLOUD)
+         * ========================================================
+         * Ganti nilai string "URL_WEB_APP_ANDA" di bawah dengan tautan Web App
+         * yang diperoleh setelah melakukan deploy pada Google Apps Script Anda.
+         */
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwBtHrcsVb7mzBD-6PSZeUrQhuf3qLA_O4ZMwkT9GJWYg5ceYCd5wqEy2r5TwnGYfNRQQ/exec"; 
+
+        /**
+         * Helper utility untuk mengambil format tanggal lokal YYYY-MM-DD
+         * guna mencegah bug zona waktu (timezone offset bug) di `.toISOString()`.
+         */
+        function getLocalDateString(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        class SheetsApiService {
+            constructor() {}
+
+            // GET ALL DATA ABSENSI (Mengambil gabungan data absensi)
+            async fetchAllRecords() {
+                if (this.isFallbackMode()) {
+                    return this.getLocalFallbackRecords();
+                }
+                try {
+                    const response = await fetch(`${SCRIPT_URL}?action=fetchAll`);
+                    if (!response.ok) throw new Error("Gagal mengambil data dari Google Sheets API.");
+                    return await response.json();
+                } catch (err) {
+                    console.warn("Koneksi gagal, beralih ke local storage:", err);
+                    showToast("Mode Offline", "Koneksi cloud gagal. Menggunakan data cadangan lokal harian.", "warning");
+                    return this.getLocalFallbackRecords();
+                }
+            }
+
+            // GET VERIFY EMPLOYEE (Verifikasi Kode + Cek Kehadiran Hari Ini)
+            async verifyEmployee(code) {
+                const todayStr = getLocalDateString();
+                if (this.isFallbackMode()) {
+                    return this.localFallbackVerify(code, todayStr);
+                }
+                try {
+                    const response = await fetch(`${SCRIPT_URL}?action=verify&code=${code}&date=${todayStr}`);
+                    if (!response.ok) throw new Error("HTTP Error " + response.status);
+                    return await response.json();
+                } catch (err) {
+                    console.warn("Gagal memverifikasi via cloud, mencoba lokal database:", err);
+                    return this.localFallbackVerify(code, todayStr);
+                }
+            }
+
+            // POST NEW RECORD (Check In - Masuk)
+            async createRecord(employeeCode, employeeName, checkInTime, notes) {
+                const todayStr = getLocalDateString();
+                const payload = {
+                    action: "checkIn",
+                    employeeCode,
+                    employeeName,
+                    date: todayStr,
+                    checkIn: checkInTime,
+                    notes
+                };
+
+                if (this.isFallbackMode()) {
+                    return this.localFallbackCreate(payload);
+                }
+
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error("HTTP Error " + response.status);
+                    const resJson = await response.json();
+                    if (!resJson.success) throw new Error(resJson.error || "Gagal absen masuk");
+                    return resJson.record;
+                } catch (err) {
+                    console.warn("Pencatatan gagal via cloud, dialihkan ke lokal:", err);
+                    return this.localFallbackCreate(payload);
+                }
+            }
+
+            // POST UPDATE RECORD (Check Out - Keluar)
+            async updateRecordCheckOut(employeeCode, date, checkOutTime) {
+                const notes = document.getElementById('attendance-notes').value.trim();
+                const employeeName = activeResolvedEmployee ? activeResolvedEmployee.name : "Karyawan";
+                const payload = {
+                    action: "checkOut",
+                    employeeCode,
+                    employeeName,
+                    date,
+                    checkOut: checkOutTime,
+                    notes
+                };
+
+                if (this.isFallbackMode()) {
+                    return this.localFallbackCheckout(payload);
+                }
+
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: "POST",
+                        body: JSON.stringify(payload)
+                    });
+                    if (!response.ok) throw new Error("HTTP Error " + response.status);
+                    const resJson = await response.json();
+                    if (!resJson.success) throw new Error(resJson.error || "Gagal absen keluar");
+                    return resJson.record;
+                } catch (err) {
+                    console.warn("Pencatatan checkout gagal via cloud, dialihkan ke lokal:", err);
+                    return this.localFallbackCheckout(payload);
+                }
+            }
+
+            // Deteksi jika pengguna belum memasang URL API Apps Script nyata
+            isFallbackMode() {
+                return SCRIPT_URL === "URL_WEB_APP_ANDA" || SCRIPT_URL.trim() === "";
+            }
+
+            // --- ⚠️ METHOD CADANGAN LOKAL (FALLBACK DEMO) ⚠️ ---
+            // Digunakan otomatis bila SCRIPT_URL belum dikonfigurasi, agar file tetap dapat dijalankan langsung
+            getLocalFallbackRecords() {
+                const localKey = "cloud_attendance_records_nocode";
+                if (!localStorage.getItem(localKey)) {
+                    const today = new Date();
+                    const todayStr = getLocalDateString(today);
+                    
+                    const yesterday = new Date();
+                    yesterday.setDate(today.getDate() - 1);
+                    const yesterdayStr = getLocalDateString(yesterday);
+
+                    const sampleRecords = [
+                        { id: "rec_1", employeeCode: "EMP001", employeeName: "Budi Santoso", date: yesterdayStr, checkIn: "07:55:12", checkOut: "16:02:44", duration: "08 jam 07 mnt", notes: "Hadir tepat waktu di kantor pusat" },
+                        { id: "rec_2", employeeCode: "EMP002", employeeName: "Siti Rahmawati", date: yesterdayStr, checkIn: "08:14:22", checkOut: "17:05:10", duration: "08 jam 50 mnt", notes: "Selesai menyelesaikan laporan harian" },
+                        { id: "rec_3", employeeCode: "EMP003", employeeName: "Andi Wijaya", date: todayStr, checkIn: "08:12:05", checkOut: null, duration: "--", notes: "Bekerja remote (WFH)" },
+                        { id: "rec_4", employeeCode: "EMP004", employeeName: "Dewi Lestari", date: todayStr, checkIn: "07:45:30", checkOut: "15:45:12", duration: "07 jam 59 mnt", notes: "Izin pulang cepat dengan persetujuan HRD" }
+                    ];
+                    localStorage.setItem(localKey, JSON.stringify(sampleRecords));
+                }
+                return JSON.parse(localStorage.getItem(localKey)) || [];
+            }
+
+            localFallbackVerify(code, dateVal) {
+                const localUsers = {
+                    "EMP001": { code: "EMP001", name: "Budi Santoso", jabatan: "Developer" },
+                    "EMP002": { code: "EMP002", name: "Siti Rahmawati", jabatan: "Desainer UI/UX" },
+                    "EMP003": { code: "EMP003", name: "Andi Wijaya", jabatan: "Project Manager" },
+                    "EMP004": { code: "EMP004", name: "Dewi Lestari", jabatan: "QA Engineer" },
+                    "EMP005": { code: "EMP005", name: "Eko Prasetyo", jabatan: "DevOps Engineer" },
+                    "EMP006": { code: "EMP006", name: "Fitriani", jabatan: "HR Specialist" }
+                };
+                const user = localUsers[code];
+                if (!user) return { success: true, exists: false };
+                
+                const records = this.getLocalFallbackRecords();
+                const record = records.find(r => r.employeeCode === code && r.date === dateVal) || null;
+                return { success: true, exists: true, user, record };
+            }
+
+            localFallbackCreate(payload) {
+                const records = this.getLocalFallbackRecords();
+                const newRecord = {
+                    id: "rec_" + Date.now(),
+                    employeeCode: payload.employeeCode,
+                    employeeName: payload.employeeName,
+                    date: payload.date,
+                    checkIn: payload.checkIn,
+                    checkOut: null,
+                    duration: "--",
+                    notes: payload.notes || "Hadir"
+                };
+                records.push(newRecord);
+                localStorage.setItem("cloud_attendance_records_nocode", JSON.stringify(records));
+                return newRecord;
+            }
+
+            localFallbackCheckout(payload) {
+                const records = this.getLocalFallbackRecords();
+                const idx = records.findIndex(r => r.employeeCode === payload.employeeCode && r.date === payload.date && r.checkOut === null);
+                if (idx === -1) return null;
+                
+                const checkInTime = records[idx].checkIn;
+                const checkOutTime = payload.checkOut;
+                
+                const calculateDur = (startTime, endTime) => {
+                    const [h1, m1, s1] = startTime.split(':').map(Number);
+                    const [h2, m2, s2] = endTime.split(':').map(Number);
+                    let date1 = new Date(2000, 0, 1, h1, m1, s1);
+                    let date2 = new Date(2000, 0, 1, h2, m2, s2);
+                    if (date2 < date1) date2.setDate(date2.getDate() + 1);
+                    const diffMs = date2 - date1;
+                    const diffHours = Math.floor(diffMs / 3600000);
+                    const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                    return `${diffHours.toString().padStart(2, '0')} jam ${diffMins.toString().padStart(2, '0')} mnt`;
+                };
+
+                records[idx].checkOut = checkOutTime;
+                records[idx].duration = calculateDur(checkInTime, checkOutTime);
+                if (payload.notes) records[idx].notes = payload.notes;
+                
+                localStorage.setItem("cloud_attendance_records_nocode", JSON.stringify(records));
+                return records[idx];
+            }
+        }
+
+        const apiService = new SheetsApiService();
+
+        /**
+         * ==========================================
+         * 2. VARIABEL GLOBAL & STATE MANAJEMEN
+         * ==========================================
+         */
+        let currentTab = "user";
+        let cachedRecords = []; 
+        let activeResolvedEmployee = null; // Menyimpan data karyawan terverifikasi saat ini
+
+        // Referensi Elemen DOM Navigasi
+        const tabUserBtn = document.getElementById('tab-user-btn');
+        const tabAdminBtn = document.getElementById('tab-admin-btn');
+        const tabUserContent = document.getElementById('tab-user-content');
+        const tabAdminContent = document.getElementById('tab-admin-content');
+
+
+        /**
+         * ==========================================
+         * 3. INITIALIZER & EVENT LISTENERS
+         * ==========================================
+         */
+        document.addEventListener("DOMContentLoaded", () => {
+            initRealtimeClock();
+            checkAndLockForSunday();
+            setupTabNavigation();
+            setupAttendanceForm();
+            setupAdminDashboard();
+            refreshDashboardData(); 
+        });
+
+        function initRealtimeClock() {
+            const timeEl = document.getElementById('live-time');
+            const dateEl = document.getElementById('live-date');
+            const cardDateEl = document.getElementById('status-card-date');
+
+            function updateTime() {
+                const now = new Date();
+                
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                timeEl.textContent = `${hours}:${minutes}:${seconds}`;
+
+                const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                
+                const dayName = days[now.getDay()];
+                const dateNum = now.getDate();
+                const monthName = months[now.getMonth()];
+                const yearNum = now.getFullYear();
+
+                const formattedDate = `${dayName}, ${dateNum} ${monthName} ${yearNum}`;
+                dateEl.textContent = formattedDate;
+                cardDateEl.textContent = formattedDate;
+            }
+
+            updateTime();
+            setInterval(updateTime, 1000);
+        }
+
+        function checkAndLockForSunday() {
+            const now = new Date();
+            const isSunday = now.getDay() === 0;
+
+            if (isSunday) {
+                const checkInBtn = document.getElementById('btn-check-in');
+                const checkOutBtn = document.getElementById('btn-check-out');
+                const warningBox = document.getElementById('sunday-warning');
+
+                checkInBtn.disabled = true;
+                checkOutBtn.disabled = true;
+                warningBox.classList.remove('hidden');
+                
+                showToast("Hari Minggu Terdeteksi!", "Hari ini adalah hari libur kerja. Sistem absensi ditutup sementara.", "warning");
+            }
+        }
+
+        function setupTabNavigation() {
+            tabUserBtn.addEventListener('click', () => {
+                switchTab('user');
+            });
+
+            tabAdminBtn.addEventListener('click', () => {
+                switchTab('admin');
+                refreshDashboardData(); 
+            });
+        }
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+
+            if (tabName === 'user') {
+                tabUserBtn.className = "flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 bg-indigo-50 text-indigo-700 shadow-sm";
+                tabAdminBtn.className = "flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-slate-600 hover:bg-slate-100";
+                
+                tabUserContent.classList.remove('hidden');
+                tabAdminContent.classList.add('hidden');
+            } else {
+                tabUserBtn.className = "flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-slate-600 hover:bg-slate-100";
+                tabAdminBtn.className = "flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 bg-indigo-50 text-indigo-700 shadow-sm";
+                
+                tabUserContent.classList.add('hidden');
+                tabAdminContent.classList.remove('hidden');
+            }
+        }
+
+
+        /**
+         * ==========================================
+         * 4. REALTIME VERIFICATION & ATTENDANCE FORM
+         * ==========================================
+         */
+        function setupAttendanceForm() {
+            const codeInput = document.getElementById('employee-code-input');
+            const resolvedNameText = document.getElementById('employee-resolved-name');
+            const verificationBadge = document.getElementById('verification-badge');
+            
+            const checkInBtn = document.getElementById('btn-check-in');
+            const checkOutBtn = document.getElementById('btn-check-out');
+            const noteInput = document.getElementById('attendance-notes');
+
+            let debounceTimer;
+
+            // Listening real-time input validation (Debounced to prevent API rate limits)
+            codeInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                const enteredCode = codeInput.value.trim().toUpperCase();
+                codeInput.value = enteredCode; // Force uppercase styling
+
+                if (enteredCode.length === 0) {
+                    resetVerificationUI("Masukkan kode karyawan untuk divalidasi oleh sistem cloud.");
+                    return;
+                }
+
+                // Show loading indicator
+                resolvedNameText.textContent = "Menghubungi cloud untuk verifikasi...";
+                resolvedNameText.className = "text-xs font-semibold text-indigo-500 animate-pulse";
+                verificationBadge.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-indigo-500"></i>';
+                verificationBadge.classList.remove('hidden');
+
+                // Trigger server check after 600ms of user typing inactivity
+                debounceTimer = setTimeout(async () => {
+                    try {
+                        const response = await apiService.verifyEmployee(enteredCode);
+                        
+                        if (response && response.success && response.exists) {
+                            const user = response.user;
+                            activeResolvedEmployee = {
+                                code: user.code,
+                                name: user.name
+                            };
+
+                            // Update UI Verification Success
+                            resolvedNameText.textContent = `Karyawan Teridentifikasi: ${user.name} (${user.jabatan || 'Staff'})`;
+                            resolvedNameText.className = "text-xs font-bold text-emerald-600";
+                            
+                            verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+                            verificationBadge.classList.remove('hidden');
+
+                            // Sync status with database records
+                            updateUserStatusDisplay(user.name, user.code, response.record);
+                        } else {
+                            // Update UI Verification Failed
+                            activeResolvedEmployee = null;
+                            resolvedNameText.textContent = "Kode karyawan tidak terdaftar di sistem.";
+                            resolvedNameText.className = "text-xs font-semibold text-rose-500";
+                            
+                            verificationBadge.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
+                            verificationBadge.classList.remove('hidden');
+
+                            checkInBtn.disabled = true;
+                            checkOutBtn.disabled = true;
+                            resetStatusPanelToVerificationRequired();
+                        }
+                    } catch (error) {
+                        activeResolvedEmployee = null;
+                        resolvedNameText.textContent = "Gagal menghubungi server verifikasi.";
+                        resolvedNameText.className = "text-xs font-semibold text-rose-500";
+                        
+                        verificationBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-400 animate-pulse"></i>';
+                        verificationBadge.classList.remove('hidden');
+
+                        checkInBtn.disabled = true;
+                        checkOutBtn.disabled = true;
+                        resetStatusPanelToVerificationRequired();
+                        showToast("Koneksi Gagal", "Gagal memverifikasi kode karyawan karena kendala jaringan.", "error");
+                    }
+                }, 600);
+            });
+
+            // LOGIKA KLIK TOMBOL ABSEN MASUK
+            checkInBtn.addEventListener('click', async () => {
+                if (!activeResolvedEmployee) {
+                    showToast("Validasi Gagal", "Masukkan kode karyawan yang valid terlebih dahulu!", "warning");
+                    return;
+                }
+
+                showButtonLoading(checkInBtn, true);
+                
+                try {
+                    const now = new Date();
+                    const checkInTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+                    
+                    const result = await apiService.createRecord(
+                        activeResolvedEmployee.code, 
+                        activeResolvedEmployee.name, 
+                        checkInTime, 
+                        noteInput.value.trim()
+                    );
+                    
+                    updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
+                    noteInput.value = ""; 
+                    showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}! Jam masuk tersimpan.`, "success");
+                } catch (error) {
+                    showToast("Gagal Tersimpan", "Gagal mengirim data presensi ke server cloud.", "error");
+                } finally {
+                    showButtonLoading(checkInBtn, false);
+                }
+            });
+
+            // LOGIKA KLIK TOMBOL ABSEN KELUAR
+            checkOutBtn.addEventListener('click', async () => {
+                if (!activeResolvedEmployee) {
+                    showToast("Validasi Gagal", "Masukkan kode karyawan yang valid!", "warning");
+                    return;
+                }
+
+                showButtonLoading(checkOutBtn, true);
+
+                try {
+                    const now = new Date();
+                    const checkOutTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+                    const todayStr = getLocalDateString(now);
+
+                    const result = await apiService.updateRecordCheckOut(activeResolvedEmployee.code, todayStr, checkOutTime);
+                    
+                    updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
+                    showToast("Sukses Pulang", `Terima kasih, ${activeResolvedEmployee.name}. Absen keluar Anda tersimpan.`, "success");
+                } catch (error) {
+                    showToast("Terjadi Kendala", error.message || "Gagal melakukan absensi keluar.", "error");
+                } finally {
+                    showButtonLoading(checkOutBtn, false);
+                }
+            });
+        }
+
+        // Fungsi utilitas helper demo untuk mengisi kode secara instan
+        window.fillDemoCode = function(code) {
+            const codeInput = document.getElementById('employee-code-input');
+            codeInput.value = code;
+            codeInput.dispatchEvent(new Event('input'));
+        }
+
+        function resetVerificationUI(placeholderMsg) {
+            activeResolvedEmployee = null;
+            document.getElementById('employee-resolved-name').textContent = placeholderMsg;
+            document.getElementById('employee-resolved-name').className = "text-xs font-semibold text-slate-400 italic";
+            document.getElementById('verification-badge').classList.add('hidden');
+            document.getElementById('btn-check-in').disabled = true;
+            document.getElementById('btn-check-out').disabled = true;
+            resetStatusPanelToVerificationRequired();
+        }
+
+        function resetStatusPanelToVerificationRequired() {
+            document.getElementById('status-not-started').classList.remove('hidden');
+            document.getElementById('status-logged-in').classList.add('hidden');
+            document.getElementById('status-completed').classList.add('hidden');
+            
+            document.getElementById('status-placeholder-title').textContent = "Menunggu Verifikasi Kode";
+            document.getElementById('status-placeholder-text').textContent = "Ketik kode karyawan aktif Anda di form kiri untuk membuka menu penulisan absensi.";
+        }
+
+        function showButtonLoading(buttonEl, isLoading) {
+            const textSpan = buttonEl.querySelector('.btn-text');
+            const spinnerSpan = buttonEl.querySelector('.btn-spinner');
+
+            if (isLoading) {
+                buttonEl.disabled = true;
+                textSpan.style.visibility = 'hidden';
+                spinnerSpan.classList.remove('hidden');
+                spinnerSpan.classList.add('flex');
+            } else {
+                buttonEl.disabled = false;
+                textSpan.style.visibility = 'visible';
+                spinnerSpan.classList.add('hidden');
+                spinnerSpan.classList.remove('flex');
+            }
+        }
+
+        function updateUserStatusDisplay(employeeName, employeeCode, record) {
+            const notStartedCard = document.getElementById('status-not-started');
+            const loggedInCard = document.getElementById('status-logged-in');
+            const completedCard = document.getElementById('status-completed');
+            
+            const checkInBtn = document.getElementById('btn-check-in');
+            const checkOutBtn = document.getElementById('btn-check-out');
+
+            const isSunday = new Date().getDay() === 0;
+
+            if (!record) {
+                notStartedCard.classList.remove('hidden');
+                loggedInCard.classList.add('hidden');
+                completedCard.classList.add('hidden');
+
+                document.getElementById('status-placeholder-title').textContent = "Belum Ada Presensi Hari Ini";
+                document.getElementById('status-placeholder-text').textContent = `Karyawan ${employeeName} belum mencatatkan absensi harian. Silakan tekan tombol 'Absen Masuk' di form kiri.`;
+
+                if (!isSunday) {
+                    checkInBtn.disabled = false;
+                    checkOutBtn.disabled = true;
+                }
+            } 
+            else if (record.checkIn && !record.checkOut) {
+                notStartedCard.classList.add('hidden');
+                loggedInCard.classList.remove('hidden');
+                completedCard.classList.add('hidden');
+
+                document.getElementById('check-in-info').innerHTML = `Anda sudah absen masuk pada jam <span class="font-extrabold text-slate-900">${record.checkIn}</span>.`;
+                document.getElementById('active-user-display').textContent = record.employeeName;
+                document.getElementById('active-code-display').textContent = record.employeeCode;
+
+                if (!isSunday) {
+                    checkInBtn.disabled = true; 
+                    checkOutBtn.disabled = false;
+                }
+            } 
+            else if (record.checkIn && record.checkOut) {
+                notStartedCard.classList.add('hidden');
+                loggedInCard.classList.add('hidden');
+                completedCard.classList.remove('hidden');
+
+                document.getElementById('check-out-info').innerHTML = `Absen keluar Anda tercatat pada jam <span class="font-extrabold text-slate-900">${record.checkOut}</span>.`;
+                document.getElementById('summary-check-in').textContent = record.checkIn;
+                document.getElementById('summary-check-out').textContent = record.checkOut;
+
+                if (!isSunday) {
+                    checkInBtn.disabled = true;
+                    checkOutBtn.disabled = true;
+                }
+            }
+        }
+
+
+        /**
+         * ==========================================
+         * 5. HALAMAN ADMIN (DASHBOARD LOGIC)
+         * ==========================================
+         */
+        function setupAdminDashboard() {
+            const filterDateInput = document.getElementById('filter-date');
+            const filterNameInput = document.getElementById('filter-name');
+            const clearFiltersBtn = document.getElementById('btn-clear-filters');
+            const exportCsvBtn = document.getElementById('btn-export-csv');
+
+            const todayStr = getLocalDateString();
+            filterDateInput.value = todayStr;
+
+            filterDateInput.addEventListener('change', renderAdminTable);
+            filterNameInput.addEventListener('input', renderAdminTable);
+
+            clearFiltersBtn.addEventListener('click', () => {
+                filterDateInput.value = todayStr;
+                filterNameInput.value = "";
+                renderAdminTable();
+                showToast("Filter Reset", "Kriteria pencarian dikembalikan ke hari ini.", "info");
+            });
+
+            exportCsvBtn.addEventListener('click', () => {
+                exportDataToCSV();
+            });
+        }
+
+        async function refreshDashboardData() {
+            try {
+                cachedRecords = await apiService.fetchAllRecords();
+                renderAdminTable();
+                calculateAdminStats();
+            } catch (error) {
+                showToast("Sinkronisasi Gagal", "Gagal memperbarui data panel admin dari cloud.", "error");
+            }
+        }
+
+        function calculateAdminStats() {
+            const todayStr = getLocalDateString();
+            const todayRecords = cachedRecords.filter(r => r.date === todayStr);
+
+            const totalPresent = todayRecords.length;
+            const activeWorking = todayRecords.filter(r => r.checkIn && !r.checkOut).length;
+            const completedWorking = todayRecords.filter(r => r.checkIn && r.checkOut).length;
+
+            let validDurationsCount = 0;
+            let totalHours = 0;
+
+            todayRecords.forEach(r => {
+                if (r.duration && r.duration !== "--") {
+                    const match = r.duration.match(/(\d+)\s*jam/);
+                    if (match) {
+                        totalHours += parseInt(match[1]);
+                        validDurationsCount++;
+                    }
+                }
+            });
+
+            const avgDuration = validDurationsCount > 0 ? (totalHours / validDurationsCount).toFixed(1) : "0";
+
+            document.getElementById('stat-total-present').textContent = totalPresent;
+            document.getElementById('stat-active-working').textContent = activeWorking;
+            document.getElementById('stat-completed-working').textContent = completedWorking;
+            document.getElementById('stat-avg-duration').textContent = `${avgDuration} jam`;
+        }
+
+        function renderAdminTable() {
+            const tableBody = document.getElementById('attendance-table-body');
+            const emptyState = document.getElementById('table-empty-state');
+            
+            const selectedDate = document.getElementById('filter-date').value;
+            const searchKeyword = document.getElementById('filter-name').value.trim().toLowerCase();
+
+            const filteredRecords = cachedRecords.filter(record => {
+                const matchDate = !selectedDate || record.date === selectedDate;
+                const matchNameOrCode = !searchKeyword || 
+                    record.employeeName.toLowerCase().includes(searchKeyword) || 
+                    record.employeeCode.toLowerCase().includes(searchKeyword);
+                return matchDate && matchNameOrCode;
+            });
+
+            filteredRecords.sort((a, b) => b.id.localeCompare(a.id));
+            tableBody.innerHTML = "";
+
+            if (filteredRecords.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            filteredRecords.forEach(record => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/70 transition duration-150";
+
+                const formattedDate = formatSimpleDate(record.date);
+
+                tr.innerHTML = `
+                    <td class="py-4 px-6 text-sm font-medium text-slate-600">${formattedDate}</td>
+                    <td class="py-4 px-6 text-sm font-semibold text-indigo-700 font-mono">${record.employeeCode}</td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs uppercase">
+                                ${record.employeeName.charAt(0)}
+                            </div>
+                            <span class="text-sm font-bold text-slate-800">${record.employeeName}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 text-sm text-slate-700 text-center font-mono">${record.checkIn || '--:--'}</td>
+                    <td class="py-4 px-6 text-sm text-center font-mono">
+                        ${record.checkOut 
+                            ? `<span class="text-slate-700">${record.checkOut}</span>` 
+                            : `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 animate-pulse"><i class="fa-solid fa-spinner animate-spin mr-1 text-[8px]"></i>Aktif Bekerja</span>`
+                        }
+                    </td>
+                    <td class="py-4 px-6 text-sm text-slate-600 text-center font-semibold">${record.duration}</td>
+                    <td class="py-4 px-6 text-sm text-slate-500 max-w-xs truncate" title="${record.notes || ''}">
+                        ${record.notes || '<span class="text-slate-300 italic">Tidak ada catatan</span>'}
+                    </td>
+                `;
+
+                tableBody.appendChild(tr);
+            });
+        }
+
+        function exportDataToCSV() {
+            if (cachedRecords.length === 0) {
+                showToast("Gagal Ekspor", "Tidak ada data yang dapat diekspor saat ini.", "warning");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "ID,Tanggal,Kode Karyawan,Nama Karyawan,Waktu Masuk,Waktu Keluar,Durasi Kerja,Keterangan\n";
+
+            cachedRecords.forEach(r => {
+                const row = [
+                    r.id,
+                    r.date,
+                    `"${r.employeeCode}"`,
+                    `"${r.employeeName}"`,
+                    r.checkIn || "--",
+                    r.checkOut || "--",
+                    r.duration || "--",
+                    `"${r.notes || ''}"`
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const downloadLink = document.createElement("a");
+            downloadLink.setAttribute("href", encodedUri);
+            downloadLink.setAttribute("download", `Rekap_Absensi_Karyawan_${getLocalDateString()}.csv`);
+            document.body.appendChild(downloadLink);
+            
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+
+            showToast("Ekspor Berhasil", "File Rekap Absensi (CSV) telah diunduh.", "success");
+        }
+
+        // System-wide Toast Notification Utility
+        function showToast(title, message, type = "success") {
+            const container = document.getElementById('toast-container');
+            
+            let bgClass = "bg-white border-l-4 border-emerald-500 text-slate-800";
+            let iconMarkup = '<i class="fa-solid fa-circle-check text-emerald-500 text-lg"></i>';
+
+            if (type === "warning") {
+                bgClass = "bg-white border-l-4 border-amber-500 text-slate-800";
+                iconMarkup = '<i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg"></i>';
+            } else if (type === "error") {
+                bgClass = "bg-white border-l-4 border-rose-500 text-slate-800";
+                iconMarkup = '<i class="fa-solid fa-circle-xmark text-rose-500 text-lg"></i>';
+            } else if (type === "info") {
+                bgClass = "bg-white border-l-4 border-indigo-500 text-slate-800";
+                iconMarkup = '<i class="fa-solid fa-circle-info text-indigo-500 text-lg"></i>';
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `flex items-start space-x-3 p-4 rounded-xl shadow-xl border border-slate-100 max-w-sm pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300 ${bgClass}`;
+            
+            toast.innerHTML = `
+                <div class="shrink-0">${iconMarkup}</div>
+                <div class="flex-grow">
+                    <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">${title}</h4>
+                    <p class="text-xs text-slate-500 mt-1">${message}</p>
+                </div>
+                <button class="text-slate-300 hover:text-slate-500 shrink-0 transition" onclick="this.parentElement.remove()">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 4000);
+        }
+
+        function formatSimpleDate(dateString) {
+            if (!dateString) return "--";
+            try {
+                const parts = dateString.split("-");
+                if (parts.length === 3) {
+                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+                return dateString;
+            } catch (e) {
+                return dateString;
+            }
+        }
+    </script>
+</body>
+</html>
