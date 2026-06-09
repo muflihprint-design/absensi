@@ -296,7 +296,7 @@
     <!-- LOGIKA JAVASCRIPT & ARSITEKTUR APLIKASI      -->
     <!-- ============================================ -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzNhM1oKk6zrG_A056BTEd8mAuwNW4tMYCCkWORK7pf94TiBSjRfUV4YU506FiLUu3pcg/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJmnWZBegMSdZIDeZZWHwJ0QMRfBsjbSxryRbtFmzC5XycX-ujtCPSjw7TCUbeeNOxqA/exec"; 
         
 function getLocalDateString(date = new Date()) {
     // Memastikan waktu lokal benar
@@ -338,17 +338,19 @@ async verifyEmployee(code) {
     console.log("Tanggal yang dikirim: ", todayStr);
 
     // 3. Gunakan URL yang sudah terenkode dengan benar
-    const url = `${SCRIPT_URL}?action=verify&code=${encodeURIComponent(code)}&date=${todayStr}`;
-    console.log("URL Request: ", url);
+  const url = new URL(SCRIPT_URL);
+    url.searchParams.append('action', 'verify');
+    url.searchParams.append('code', code);
+    url.searchParams.append('date', todayStr);
 
     try {
-        const response = await fetch(url, {
+        const response = await fetch(url.toString(), {
             method: 'GET',
-            mode: 'cors' 
+            redirect: 'follow' // Penting untuk menghindari error Redirect
         });
 
-        if (!response.ok) throw new Error("HTTP Error " + response.status);
-        
+        if (!response.ok) throw new Error("Server error: " + response.status);
+
         const data = await response.json();
         
         if (data.success && data.exists) {
