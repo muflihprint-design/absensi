@@ -85,32 +85,26 @@
         <!-- 1. HALAMAN KARYAWAN (USER TAB)               -->
         <!-- ============================================ -->
         <section id="tab-user-content" class="space-y-6">
+            <div class="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-bold">Halo, Selamat Bekerja!</h1>
+            <p class="text-indigo-200 text-xs sm:text-sm mt-0.5">Masukkan kode karyawan untuk absensi harian.</p>
             
-            <!-- Welcome banner & Realtime Clock -->
-            <div class="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-                <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-y-6 translate-x-6">
-                    <i class="fa-solid fa-clock text-[200px]"></i>
-                </div>
-                <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                    <div>
-                        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Halo, Selamat Bekerja!</h1>
-                        <p class="text-indigo-200 mt-1.5 text-sm sm:text-base">Masukkan kode karyawan unik Anda untuk mencatatkan absensi harian secara aman.</p>
-                        
-                        <!-- Sunday Notice -->
-                        <div id="sunday-warning" class="hidden mt-4 inline-flex items-center space-x-2 bg-rose-500/20 border border-rose-500/30 text-rose-200 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                            <i class="fa-solid fa-circle-exclamation"></i>
-                            <span>Hari Minggu: Hari libur kerja. Tombol absensi dinonaktifkan.</span>
-                        </div>
-                    </div>
-                    <!-- Live Clock and Date Panel -->
-                    <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center space-x-4 md:self-stretch md:justify-center">
-                        <div class="text-center px-2">
-                            <span id="live-date" class="block text-xs font-semibold uppercase tracking-wider text-indigo-300">Memuat tanggal...</span>
-                            <span id="live-time" class="block text-3xl font-bold tracking-tight text-white mt-1 font-mono">00:00:00</span>
-                        </div>
-                    </div>
-                </div>
+            <div id="sunday-warning" class="hidden mt-2 inline-flex items-center space-x-1.5 bg-rose-500/20 border border-rose-500/30 text-rose-200 px-2 py-0.5 rounded-md text-[10px] font-medium">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>Libur hari Minggu - Sistem dinonaktifkan.</span>
             </div>
+        </div>
+
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10 flex items-center justify-center sm:justify-end gap-3 shrink-0">
+            <div class="text-right">
+                <span id="live-date" class="block text-[10px] font-semibold uppercase tracking-wider text-indigo-300">Memuat...</span>
+                <span id="live-time" class="block text-2xl font-bold font-mono leading-none text-white">00:00:00</span>
+            </div>
+        </div>
+    </div>
+</div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <!-- FORM CONTAINER -->
