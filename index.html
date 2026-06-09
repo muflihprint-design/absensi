@@ -721,58 +721,56 @@ const apiService = new SheetsApiService();
         }
 
         function updateUserStatusDisplay(employeeName, employeeCode, record) {
-            const notStartedCard = document.getElementById('status-not-started');
-            const loggedInCard = document.getElementById('status-logged-in');
-            const completedCard = document.getElementById('status-completed');
-            
-            const checkInBtn = document.getElementById('btn-check-in');
-            const checkOutBtn = document.getElementById('btn-check-out');
+    const notStartedCard = document.getElementById('status-not-started');
+    const loggedInCard = document.getElementById('status-logged-in');
+    const completedCard = document.getElementById('status-completed');
+    
+    const checkInBtn = document.getElementById('btn-check-in');
+    const checkOutBtn = document.getElementById('btn-check-out');
 
-            const isSunday = new Date().getDay() === 0;
+    // Default: Tombol Masuk mati, Tombol Keluar mati
+    checkInBtn.disabled = true;
+    checkOutBtn.disabled = true;
 
-            if (!record) {
-                notStartedCard.classList.remove('hidden');
-                loggedInCard.classList.add('hidden');
-                completedCard.classList.add('hidden');
+    const isSunday = new Date().getDay() === 0;
+    if (isSunday) return; // Jika Minggu, biarkan semua disabled
 
-                document.getElementById('status-placeholder-title').textContent = "Belum Ada Presensi Hari Ini";
-                document.getElementById('status-placeholder-text').textContent = `Karyawan ${employeeName} belum mencatatkan absensi harian. Silakan tekan tombol 'Absen Masuk' di form kiri.`;
+    if (!record) {
+        // BELUM ABSEN SAMA SEKALI
+        notStartedCard.classList.remove('hidden');
+        loggedInCard.classList.add('hidden');
+        completedCard.classList.add('hidden');
+        
+        // Aktifkan Masuk
+        checkInBtn.disabled = false;
+    } 
+    else if (record.checkIn && !record.checkOut) {
+        // SUDAH MASUK, BELUM PULANG
+        notStartedCard.classList.add('hidden');
+        loggedInCard.classList.remove('hidden');
+        completedCard.classList.add('hidden');
 
-                if (!isSunday) {
-                    checkInBtn.disabled = false;
-                    checkOutBtn.disabled = true;
-                }
-            } 
-            else if (record.checkIn && !record.checkOut) {
-                notStartedCard.classList.add('hidden');
-                loggedInCard.classList.remove('hidden');
-                completedCard.classList.add('hidden');
+        document.getElementById('check-in-info').innerHTML = `Anda sudah absen masuk pada jam <span class="font-extrabold text-slate-900">${record.checkIn}</span>.`;
+        document.getElementById('active-user-display').textContent = record.employeeName;
+        
+        // Tetap disabled karena sudah pernah masuk
+        checkInBtn.disabled = true; 
+        checkOutBtn.disabled = false; // Aktifkan tombol pulang
+    } 
+    else if (record.checkIn && record.checkOut) {
+        // SUDAH SELESAI (MASUK & KELUAR)
+        notStartedCard.classList.add('hidden');
+        loggedInCard.classList.add('hidden');
+        completedCard.classList.remove('hidden');
 
-                document.getElementById('check-in-info').innerHTML = `Anda sudah absen masuk pada jam <span class="font-extrabold text-slate-900">${record.checkIn}</span>.`;
-                document.getElementById('active-user-display').textContent = record.employeeName;
-                document.getElementById('active-code-display').textContent = record.employeeCode;
+        document.getElementById('summary-check-in').textContent = record.checkIn;
+        document.getElementById('summary-check-out').textContent = record.checkOut;
 
-                if (!isSunday) {
-                    checkInBtn.disabled = true; 
-                    checkOutBtn.disabled = false;
-                }
-            } 
-            else if (record.checkIn && record.checkOut) {
-                notStartedCard.classList.add('hidden');
-                loggedInCard.classList.add('hidden');
-                completedCard.classList.remove('hidden');
-
-                document.getElementById('check-out-info').innerHTML = `Absen keluar Anda tercatat pada jam <span class="font-extrabold text-slate-900">${record.checkOut}</span>.`;
-                document.getElementById('summary-check-in').textContent = record.checkIn;
-                document.getElementById('summary-check-out').textContent = record.checkOut;
-
-                if (!isSunday) {
-                    checkInBtn.disabled = true;
-                    checkOutBtn.disabled = true;
-                }
-            }
-        }
-
+        // Keduanya disabled karena sudah tuntas hari ini
+        checkInBtn.disabled = true;
+        checkOutBtn.disabled = true;
+    }
+}
 
         /**
          * ==========================================
