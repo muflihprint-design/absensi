@@ -328,21 +328,44 @@ class SheetsApiService {
     }
 
     // 2. VERIFY EMPLOYEE
-    async verifyEmployee(code) {
-        const todayStr = getLocalDateString();
-        try {
-            const response = await fetch(`${SCRIPT_URL}?action=verify&code=${encodeURIComponent(code)}&date=${todayStr}`);
-            if (!response.ok) throw new Error("HTTP Error " + response.status);
-            const data = await response.json();
-            if (data.success && data.exists) localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
-            return data;
-        } catch (err) {
-            console.warn("Gagal memverifikasi, mencoba cache lokal:", err);
-            const cached = localStorage.getItem(`cache_verify_${code}`);
-            return cached ? JSON.parse(cached) : { success: false, error: "Tidak dapat terhubung." };
-        }
-    }
+async verifyEmployee(code) {
+    const todayStr = getLocalDateString();
+    try {
+        const response = await fetch(`${SCRIPT_URL}?action=verify&code=${encodeURIComponent(code)}&date=${todayStr}`);
+        if (!response.ok) throw new Error("HTTP Error " + response.status);
+        
+        const data = await response.json();
+        
+        if (data.success && data.exists) {
+            // Cache data ke localStorage
+            localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
 
+            // Logika Notifikasi jika sudah ada data absen hari ini
+            if (data.record) {
+                const statusMsg = data.record.checkOut !== "--" 
+                    ? "Anda sudah melakukan absen Masuk dan Keluar hari ini." 
+                    : "Anda sudah melakukan absen Masuk.";
+                console.info("Status Absen:", statusMsg);
+                // Anda bisa mengganti alert dengan notifikasi UI yang lebih halus
+                // alert(statusMsg); 
+            }
+        }
+        
+        return data;
+    } catch (err) {
+        console.warn("Gagal memverifikasi, mencoba cache lokal:", err);
+        const cached = localStorage.getItem(`cache_verify_${code}`);
+        
+        if (cached) {
+            const data = JSON.parse(cached);
+            // Tambahkan catatan bahwa ini data dari cache
+            data.isCached = true;
+            return data;
+        }
+        
+        return { success: false, error: "Tidak dapat terhubung ke server. Pastikan koneksi internet aktif." };
+    }
+}
     // 3. POST NEW RECORD (Check In)
     async createRecord(employeeCode, employeeName, checkInTime, notes) {
         const todayStr = getLocalDateString();
