@@ -330,23 +330,18 @@ class SheetsApiService {
     // 2. VERIFY EMPLOYEE
 async verifyEmployee(code) {
     // 1. Pastikan variabel tanggal konsisten
-    const todayStr = getLocalDateString();
-    
-    // 2. Debugging log
-    console.log("--- DEBUG FRONTEND ---");
-    console.log("Kode yang diverifikasi: ", code);
-    console.log("Tanggal yang dikirim: ", todayStr);
-
-    // 3. Gunakan URL yang sudah terenkode dengan benar
+const todayStr = getLocalDateString();
+    // Gunakan mode: 'no-cors' HANYA jika Anda tidak butuh membaca respon JSON (tapi di sini Anda butuh)
+    // Jadi, pastikan deployment Anda sudah "Anyone" (Public) agar CORS tidak memblokir
     const url = `${SCRIPT_URL}?action=verify&code=${encodeURIComponent(code)}&date=${todayStr}`;
-    console.log("URL Request: ", url);
-
+    
     try {
-     const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    mode: 'cors' 
-});
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'cors', // Pastikan server GAS mengizinkan CORS
+            redirect: 'follow'
+        });
+
         if (!response.ok) throw new Error("HTTP Error " + response.status);
         
         const data = await response.json();
@@ -371,25 +366,11 @@ async verifyEmployee(code) {
             }
         }
         
-        return data;
+        return datareturn data;
     } catch (err) {
-        console.warn("Gagal memverifikasi, mencoba cache lokal:", err);
-        const cached = localStorage.getItem(`cache_verify_${code}`);
-        
-        if (cached) {
-            const data = JSON.parse(cached);
-            data.isCached = true;
-            
-            // Pastikan tombol tetap ter-disable jika data dari cache adalah sudah absen
-            const checkInBtn = document.getElementById('btn-check-in');
-            if (checkInBtn && data.record) {
-                checkInBtn.disabled = true;
-            }
-            
-            return data;
-        }
-        
-        return { success: false, error: "Tidak dapat terhubung ke server." };
+        console.error("Fetch gagal total:", err);
+        // Fallback ke cache...
+        return { success: false, error: "Gagal terhubung ke server." };
     }
 }
     
