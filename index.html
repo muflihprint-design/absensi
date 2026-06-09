@@ -773,19 +773,13 @@ const apiService = new SheetsApiService();
         // Aktifkan Masuk
         checkInBtn.disabled = false;
     } 
-    else if (record.checkIn && !record.checkOut) {
-        // SUDAH MASUK, BELUM PULANG
-        notStartedCard.classList.add('hidden');
-        loggedInCard.classList.remove('hidden');
-        completedCard.classList.add('hidden');
-
-        document.getElementById('check-in-info').innerHTML = `Anda sudah absen masuk pada jam <span class="font-extrabold text-slate-900">${record.checkIn}</span>.`;
-        document.getElementById('active-user-display').textContent = record.employeeName;
-        
-        // Tetap disabled karena sudah pernah masuk
-        checkInBtn.disabled = true; 
-        checkOutBtn.disabled = false; // Aktifkan tombol pulang
-    } 
+ else if (record.checkIn && (record.checkOut === null || record.checkOut === "--" || record.checkOut === "")) {
+    // SUDAH MASUK, BELUM PULANG
+    loggedInCard.classList.remove('hidden');
+    checkInBtn.disabled = true; 
+    checkOutBtn.disabled = false; // Pastikan ini jalan
+    console.log("Tombol Keluar diaktifkan");
+} 
     else if (record.checkIn && record.checkOut) {
         // SUDAH SELESAI (MASUK & KELUAR)
         notStartedCard.classList.add('hidden');
