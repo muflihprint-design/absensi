@@ -329,25 +329,41 @@ class SheetsApiService {
 
     // 2. VERIFY EMPLOYEE
 async verifyEmployee(code) {
+    // 1. Pastikan variabel tanggal konsisten
     const todayStr = getLocalDateString();
+    
+    // 2. Debugging log
+    console.log("--- DEBUG FRONTEND ---");
+    console.log("Kode yang diverifikasi: ", code);
+    console.log("Tanggal yang dikirim: ", todayStr);
+
+    // 3. Gunakan URL yang sudah terenkode dengan benar
+    const url = `${SCRIPT_URL}?action=verify&code=${encodeURIComponent(code)}&date=${todayStr}`;
+    console.log("URL Request: ", url);
+
     try {
-        const response = await fetch(`${SCRIPT_URL}?action=verify&code=${encodeURIComponent(code)}&date=${todayStr}`);
+        const response = await fetch(url);
         if (!response.ok) throw new Error("HTTP Error " + response.status);
         
         const data = await response.json();
         
         if (data.success && data.exists) {
-            // Cache data ke localStorage
+            // Simpan ke cache
             localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
 
-            // Logika Notifikasi jika sudah ada data absen hari ini
+            // Logika Update UI Tombol Masuk
+            const checkInBtn = document.getElementById('btn-check-in');
+            if (checkInBtn) {
+                // Jika sudah ada record, tombol dimatikan (true)
+                checkInBtn.disabled = (data.record !== null);
+            }
+
+            // Logika Notifikasi
             if (data.record) {
                 const statusMsg = data.record.checkOut !== "--" 
-                    ? "Anda sudah melakukan absen Masuk dan Keluar hari ini." 
-                    : "Anda sudah melakukan absen Masuk.";
+                    ? "Anda sudah absen Masuk dan Keluar hari ini." 
+                    : "Anda sudah absen Masuk.";
                 console.info("Status Absen:", statusMsg);
-                // Anda bisa mengganti alert dengan notifikasi UI yang lebih halus
-                // alert(statusMsg); 
             }
         }
         
@@ -358,14 +374,21 @@ async verifyEmployee(code) {
         
         if (cached) {
             const data = JSON.parse(cached);
-            // Tambahkan catatan bahwa ini data dari cache
             data.isCached = true;
+            
+            // Pastikan tombol tetap ter-disable jika data dari cache adalah sudah absen
+            const checkInBtn = document.getElementById('btn-check-in');
+            if (checkInBtn && data.record) {
+                checkInBtn.disabled = true;
+            }
+            
             return data;
         }
         
-        return { success: false, error: "Tidak dapat terhubung ke server. Pastikan koneksi internet aktif." };
+        return { success: false, error: "Tidak dapat terhubung ke server." };
     }
 }
+    
     // 3. POST NEW RECORD (Check In)
     async createRecord(employeeCode, employeeName, checkInTime, notes) {
         const todayStr = getLocalDateString();
