@@ -1188,26 +1188,21 @@ function calculateAdminStats() {
 
 function renderAdminTable() {
     const tableBody = document.getElementById('attendance-table-body');
-    const emptyState = document.getElementById('table-empty-state');
+    // Pastikan filter-date dan filter-name ada di HTML Anda
+    const dateFilter = document.getElementById('filter-date').value;
+    const keyword = document.getElementById('filter-name').value.toLowerCase();
     
-    const filterDate = document.getElementById('filter-date').value;
-    const filterName = document.getElementById('filter-name').value.toLowerCase();
-
+    // Melakukan filtering
     const filtered = cachedRecords.filter(r => 
-        (filterDate === "" || r.date === filterDate) &&
-        (r.employeeName.toLowerCase().includes(filterName) || r.employeeCode.toLowerCase().includes(filterName))
+        (dateFilter === "" || r.date === dateFilter) &&
+        (r.employeeName.toLowerCase().includes(keyword) || (r.employeeCode && r.employeeCode.toLowerCase().includes(keyword)))
     );
 
-    if (filtered.length === 0) {
-        tableBody.innerHTML = "";
-        emptyState.classList.remove('hidden');
-        return;
-    }
-
-    emptyState.classList.add('hidden');
+    // Render ke tabel
     tableBody.innerHTML = filtered.map(r => `
         <tr class="hover:bg-slate-50 border-b border-slate-100">
             <td class="py-4 px-6 text-sm text-slate-600">${r.date}</td>
+            <td class="py-4 px-6 text-sm font-bold text-indigo-700">${r.employeeCode || '-'}</td>
             <td class="py-4 px-6 text-sm font-bold text-slate-800">${r.employeeName}</td>
             <td class="py-4 px-6 text-sm text-center font-mono">${r.checkIn}</td>
             <td class="py-4 px-6 text-sm text-center font-mono">${r.checkOut}</td>
@@ -1215,6 +1210,7 @@ function renderAdminTable() {
         </tr>
     `).join('');
 }
+ 
     </script>
 </body>
 </html>
