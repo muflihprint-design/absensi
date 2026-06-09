@@ -1157,19 +1157,16 @@ function calculateDuration(checkIn, checkOut) {
     return `${h} jam ${m} mnt`;
 }
 
-function formatDate(dateStr) {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    return d.toISOString().split('T')[0];
-}
-
-/**
- * ==========================================
- * INTEGRASI LOGIKA ADMIN YANG DIPERBARUI
- * ==========================================
- */
-
-// Gantikan fungsi refreshDashboardData lama dengan logika fetch baru ini
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            // Ambil komponen tanggal secara lokal agar tidak terpengaruh offset UTC
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
 async function refreshDashboardData() {
     try {
         const rawData = await apiService.fetchAllRecords();
