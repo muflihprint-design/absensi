@@ -80,208 +80,60 @@
 
     <!-- MAIN CONTENT CONTAINER -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <!-- ============================================ -->
-        <!-- 1. HALAMAN KARYAWAN (USER TAB)               -->
-        <!-- ============================================ -->
         <section id="tab-user-content" class="space-y-6">
-            <div class="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="bg-indigo-900 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-            <h1 class="text-xl font-bold">Halo, Selamat Bekerja!</h1>
-            <p class="text-indigo-200 text-xs sm:text-sm mt-0.5">Masukkan kode karyawan untuk absensi harian.</p>
-            
-            <div id="sunday-warning" class="hidden mt-2 inline-flex items-center space-x-1.5 bg-rose-500/20 border border-rose-500/30 text-rose-200 px-2 py-0.5 rounded-md text-[10px] font-medium">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span>Libur hari Minggu - Sistem dinonaktifkan.</span>
-            </div>
+            <h1 class="text-xl font-bold">Portal Absensi</h1>
+            <p class="text-indigo-200 text-sm">Sistem Presensi Cloud Terintegrasi</p>
+        </div>
+        <div class="text-right bg-white/10 px-4 py-2 rounded-xl backdrop-blur">
+            <span id="live-time" class="text-2xl font-bold font-mono">00:00:00</span>
+            <span id="live-date" class="block text-[10px] uppercase opacity-70">Memuat...</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <form id="attendance-form" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Kode Karyawan</label>
+                    <input type="text" id="employee-code-input" class="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 font-bold uppercase tracking-widest focus:ring-2 focus:ring-indigo-500" placeholder="Ketik kode (Contoh: EMP001)">
+                    <p id="employee-resolved-name" class="text-[11px] text-slate-400 mt-2 italic">Masukkan kode untuk mulai verifikasi.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Catatan (Opsional)</label>
+                    <textarea id="attendance-notes" rows="2" class="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-sm" placeholder="Contoh: WFH / Sakit / Dinas"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button id="btn-check-in" type="button" disabled class="py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-40 transition">Masuk</button>
+                    <button id="btn-check-out" type="button" disabled class="py-3 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 disabled:opacity-40 transition">Keluar</button>
+                </div>
+            </form>
         </div>
 
-        <div class="bg-white/10 backdrop-blur-md rounded-xl p-3 border border-white/10 flex items-center justify-center sm:justify-end gap-3 shrink-0">
-            <div class="text-right">
-                <span id="live-date" class="block text-[10px] font-semibold uppercase tracking-wider text-indigo-300">Memuat...</span>
-                <span id="live-time" class="block text-2xl font-bold font-mono leading-none text-white">00:00:00</span>
+        <div class="lg:col-span-5">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 h-full">
+                <h2 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-indigo-500"></i> Status Hari Ini
+                </h2>
+                
+                <div id="status-container" class="min-h-[150px] flex flex-col justify-center">
+                    <div id="status-not-started" class="text-center text-slate-400">
+                        <i class="fa-solid fa-fingerprint text-3xl mb-2 opacity-50"></i>
+                        <p class="text-xs">Menunggu verifikasi...</p>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-circle text-[8px] text-emerald-500"></i> Server Aktif</span>
+                    <span>Cloud Sync</span>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- FORM CONTAINER -->
-                <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
-                    <div class="flex items-center space-x-3 pb-5 border-b border-slate-100 mb-6">
-                        <div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
-                            <i class="fa-solid fa-id-card text-lg"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-900">Verifikasi & Presensi</h2>
-                            <p class="text-xs text-slate-500">Silakan masukkan kode karyawan Anda yang terdaftar.</p>
-                        </div>
-                    </div>
-
-                    <form id="attendance-form" class="space-y-6" onsubmit="event.preventDefault();">
-                        <!-- Input Kode Karyawan -->
-                        <div>
-                            <label for="employee-code-input" class="block text-sm font-semibold text-slate-700 mb-2">Kode Karyawan</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
-                                    <i class="fa-solid fa-key"></i>
-                                </span>
-                                <input type="text" id="employee-code-input" class="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 hover:bg-slate-100/50 transition text-sm font-bold text-slate-700 tracking-wider placeholder-slate-400 uppercase">
-                            </div>
-                            
-                            <!-- Dynamic Verification Feedback -->
-                            <div class="mt-2.5 flex items-start space-x-2">
-                                <div id="verification-badge" class="hidden shrink-0 mt-0.5">
-                                    <!-- Dynamic Icon via JS -->
-                                </div>
-                                <p id="employee-resolved-name" class="text-xs font-semibold text-slate-400 italic">Masukkan kode karyawan untuk divalidasi oleh sistem cloud.</p>
-                            </div>
-                        </div>
-
-                        
-                        <!-- Notes / Keterangan -->
-                        <div>
-                            <label for="attendance-notes" class="block text-sm font-semibold text-slate-700 mb-2">Catatan / Keterangan <span class="text-xs text-slate-400 font-normal">(Opsional)</span></label>
-                            <textarea id="attendance-notes" rows="3" placeholder="Contoh: Bekerja remote (WFH), sakit, dinas luar kota..." class="block w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-slate-50 text-sm placeholder-slate-400"></textarea>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                            <!-- ABSEN MASUK BUTTON -->
-                            <button id="btn-check-in" type="button" disabled class="relative group flex items-center justify-center space-x-2 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl font-bold shadow-lg shadow-emerald-100 hover:shadow-emerald-200 hover:-translate-y-0.5 transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none">
-                                <span class="btn-text flex items-center space-x-2">
-                                    <i class="fa-solid fa-right-to-bracket text-lg"></i>
-                                    <span>Absen Masuk</span>
-                                </span>
-                                <!-- Loading Spinner -->
-                                <span class="btn-spinner hidden absolute inset-0 items-center justify-center bg-emerald-700/90 rounded-xl">
-                                    <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </span>
-                            </button>
-
-                            <!-- ABSEN KELUAR BUTTON -->
-                            <button id="btn-check-out" type="button" disabled class="relative group flex items-center justify-center space-x-2 px-6 py-3.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-bold shadow-lg shadow-rose-100 hover:shadow-rose-200 hover:-translate-y-0.5 transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none">
-                                <span class="btn-text flex items-center space-x-2">
-                                    <i class="fa-solid fa-right-from-bracket text-lg"></i>
-                                    <span>Absen Keluar</span>
-                                </span>
-                                <!-- Loading Spinner -->
-                                <span class="btn-spinner hidden absolute inset-0 items-center justify-center bg-rose-700/90 rounded-xl">
-                                    <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- NOTIFICATION & REALTIME TRACKING PANEL -->
-                <div class="lg:col-span-5 flex flex-col space-y-6">
-                    <!-- Status Card -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex-grow">
-                        <div class="flex items-center space-x-3 pb-4 border-b border-slate-100 mb-5">
-                            <div class="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center">
-                                <i class="fa-regular fa-calendar-check text-lg"></i>
-                            </div>
-                            <div>
-                                <h2 class="text-base font-bold text-slate-900">Status Kehadiran Hari Ini</h2>
-                                <p class="text-[11px] text-slate-500" id="status-card-date">Tanggal saat ini</p>
-                            </div>
-                        </div>
-
-                        <!-- Realtime Status Area -->
-                        <div id="status-container" class="space-y-4">
-                            <!-- State 1: Belum Absen / Kode Belum Valid -->
-                            <div id="status-not-started" class="text-center py-8 px-4 border-2 border-dashed border-slate-200 rounded-xl">
-                                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                                    <i class="fa-regular fa-clock text-2xl"></i>
-                                </div>
-                                <h3 id="status-placeholder-title" class="text-sm font-semibold text-slate-800">Menunggu Verifikasi Kode</h3>
-                                <p id="status-placeholder-text" class="text-xs text-slate-500 mt-1 max-w-[240px] mx-auto">Ketik kode karyawan aktif Anda di form kiri untuk membuka menu penulisan absensi.</p>
-                            </div>
-
-                            <!-- State 2: Terisi Berhasil (Tersembunyi secara default) -->
-                            <div id="status-logged-in" class="hidden space-y-4">
-                                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start space-x-3">
-                                    <div class="p-1.5 bg-emerald-100 text-emerald-700 rounded-md mt-0.5">
-                                        <i class="fa-solid fa-circle-check text-sm"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-xs font-extrabold uppercase tracking-wider text-emerald-800">Absen Masuk Berhasil</h4>
-                                        <p id="check-in-info" class="text-sm text-slate-700 mt-1">Anda sudah absen masuk pada <span class="font-bold">08:05:22</span>.</p>
-                                    </div>
-                                </div>
-
-                                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
-                                    <div>
-                                        <span class="text-xs text-slate-500 block">Karyawan Terverifikasi:</span>
-                                        <span id="active-user-display" class="text-sm font-bold text-slate-800">Nama Karyawan</span>
-                                    </div>
-                                    <span id="active-code-display" class="px-2.5 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-mono font-bold rounded-lg">EMPXXX</span>
-                                </div>
-
-                                <div class="p-4 border border-slate-100 rounded-xl flex items-center space-x-3 text-xs text-slate-500">
-                                    <i class="fa-solid fa-info-circle text-indigo-500 text-sm"></i>
-                                    <span>Gunakan tombol "Absen Keluar" ketika pekerjaan Anda telah selesai hari ini.</span>
-                                </div>
-                            </div>
-
-                            <!-- State 3: Selesai Bekerja (Tersembunyi secara default) -->
-                            <div id="status-completed" class="hidden space-y-4">
-                                <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-start space-x-3">
-                                    <div class="p-1.5 bg-indigo-100 text-indigo-700 rounded-md mt-0.5">
-                                        <i class="fa-solid fa-award text-sm"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-xs font-extrabold uppercase tracking-wider text-indigo-800">Selesai Kerja Hari Ini!</h4>
-                                        <p id="check-out-info" class="text-sm text-slate-700 mt-1">Absen keluar tercatat pada <span class="font-bold">16:10:45</span>.</p>
-                                    </div>
-                                </div>
-
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                                        <span class="text-[10px] text-slate-500 block uppercase font-semibold">Jam Masuk</span>
-                                        <span id="summary-check-in" class="text-sm font-bold text-slate-800 mt-0.5 block">08:00</span>
-                                    </div>
-                                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                                        <span class="text-[10px] text-slate-500 block uppercase font-semibold">Jam Keluar</span>
-                                        <span id="summary-check-out" class="text-sm font-bold text-slate-800 mt-0.5 block">16:00</span>
-                                    </div>
-                                </div>
-
-                                <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 text-center text-xs font-bold rounded-xl flex items-center justify-center space-x-2">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                    <span>Seluruh pencatatan hari ini sukses disimpan di Cloud.</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Cloud Sync Indicator -->
-                    <div class="bg-gradient-to-br from-slate-800 to-indigo-950 text-white rounded-2xl p-5 shadow-md flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-lg flex items-center justify-center border border-emerald-500/20">
-                                <i class="fa-solid fa-cloud-arrow-up text-base animate-pulse"></i>
-                            </div>
-                            <div>
-                                <span class="text-xs font-semibold text-indigo-200 block uppercase tracking-wider">Cloud Storage Status</span>
-                                <span class="text-xs font-bold text-emerald-400 block flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-ping"></span>
-                                    Terhubung ke Server Cloud (Live)
-                                </span>
-                            </div>
-                        </div>
-                        <i class="fa-solid fa-wifi text-slate-400 text-sm"></i>
-                    </div>
-                </div>
-            </div>
-        </section>
+</section>
 
         <!-- ============================================ -->
         <!-- 2. HALAMAN ADMIN (DASHBOARD TAB)             -->
@@ -424,61 +276,74 @@
     <!-- LOGIKA JAVASCRIPT & ARSITEKTUR APLIKASI      -->
     <!-- ============================================ -->
     <script>
-        /**
-         * ========================================================
-         * 1. GOOGLE APPS SCRIPT WEB APP INTEGRATION (REAL DB CLOUD)
-         * ========================================================
-         * Ganti nilai string "URL_WEB_APP_ANDA" di bawah dengan tautan Web App
-         * yang diperoleh setelah melakukan deploy pada Google Apps Script Anda.
-         */
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwBtHrcsVb7mzBD-6PSZeUrQhuf3qLA_O4ZMwkT9GJWYg5ceYCd5wqEy2r5TwnGYfNRQQ/exec"; 
+        
+function getLocalDateString(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
-        /**
-         * Helper utility untuk mengambil format tanggal lokal YYYY-MM-DD
-         * guna mencegah bug zona waktu (timezone offset bug) di `.toISOString()`.
-         */
-        function getLocalDateString(date = new Date()) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+class SheetsApiService {
+    constructor() {}
+
+    isFallbackMode() {
+        // Logika sederhana untuk mengecek koneksi/mode offline
+        return !navigator.onLine;
+    }
+
+    // 1. GET ALL DATA
+    async fetchAllRecords() {
+        if (this.isFallbackMode()) {
+            return this.getLocalFallbackRecords();
         }
+        try {
+            const response = await fetch(`${SCRIPT_URL}?action=fetchAll`);
+            if (!response.ok) throw new Error("Gagal mengambil data.");
+            return await response.json();
+        } catch (err) {
+            console.warn("Koneksi gagal, beralih ke local storage:", err);
+            return this.getLocalFallbackRecords();
+        }
+    }
 
-        class SheetsApiService {
-            constructor() {}
-
-            // GET ALL DATA ABSENSI (Mengambil gabungan data absensi)
-            async fetchAllRecords() {
-                if (this.isFallbackMode()) {
-                    return this.getLocalFallbackRecords();
-                }
-                try {
-                    const response = await fetch(`${SCRIPT_URL}?action=fetchAll`);
-                    if (!response.ok) throw new Error("Gagal mengambil data dari Google Sheets API.");
-                    return await response.json();
-                } catch (err) {
-                    console.warn("Koneksi gagal, beralih ke local storage:", err);
-                    showToast("Mode Offline", "Koneksi cloud gagal. Menggunakan data cadangan lokal harian.", "warning");
-                    return this.getLocalFallbackRecords();
-                }
+    // 2. VERIFY EMPLOYEE (Diperbarui untuk deteksi status lebih akurat)
+    async verifyEmployee(code) {
+        const todayStr = getLocalDateString();
+        
+        // Selalu coba API terlebih dahulu
+        try {
+            const response = await fetch(`${SCRIPT_URL}?action=verify&code=${encodeURIComponent(code)}&date=${todayStr}`);
+            if (!response.ok) throw new Error("HTTP Error " + response.status);
+            
+            const data = await response.json();
+            
+            // Simpan ke localStorage sebagai cache jika data berhasil diambil dari cloud
+            if (data.success && data.exists) {
+                localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
             }
-
-            // GET VERIFY EMPLOYEE (Verifikasi Kode + Cek Kehadiran Hari Ini)
-            async verifyEmployee(code) {
-                const todayStr = getLocalDateString();
-                if (this.isFallbackMode()) {
-                    return this.localFallbackVerify(code, todayStr);
-                }
-                try {
-                    const response = await fetch(`${SCRIPT_URL}?action=verify&code=${code}&date=${todayStr}`);
-                    if (!response.ok) throw new Error("HTTP Error " + response.status);
-                    return await response.json();
-                } catch (err) {
-                    console.warn("Gagal memverifikasi via cloud, mencoba lokal database:", err);
-                    return this.localFallbackVerify(code, todayStr);
-                }
+            
+            return data;
+        } catch (err) {
+            console.warn("Gagal memverifikasi via cloud, mencoba cache lokal:", err);
+            
+            // Coba ambil dari cache lokal jika ada
+            const cached = localStorage.getItem(`cache_verify_${code}`);
+            if (cached) {
+                return JSON.parse(cached);
             }
+            
+            return { success: false, error: "Tidak dapat terhubung ke server." };
+        }
+    }
 
+    // --- Helper untuk Fallback Data ---
+    getLocalFallbackRecords() {
+        return JSON.parse(localStorage.getItem('absensi_cache_all') || '[]');
+    }
+}
+           
             // POST NEW RECORD (Check In - Masuk)
             async createRecord(employeeCode, employeeName, checkInTime, notes) {
                 const todayStr = getLocalDateString();
