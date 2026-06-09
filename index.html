@@ -1033,94 +1033,8 @@
             }
         }
 
-        function calculateAdminStats() {
-            const todayStr = getLocalDateString();
-            const todayRecords = cachedRecords.filter(r => r.date === todayStr);
-
-            const totalPresent = todayRecords.length;
-            const activeWorking = todayRecords.filter(r => r.checkIn && !r.checkOut).length;
-            const completedWorking = todayRecords.filter(r => r.checkIn && r.checkOut).length;
-
-            let validDurationsCount = 0;
-            let totalHours = 0;
-
-            todayRecords.forEach(r => {
-                if (r.duration && r.duration !== "--") {
-                    const match = r.duration.match(/(\d+)\s*jam/);
-                    if (match) {
-                        totalHours += parseInt(match[1]);
-                        validDurationsCount++;
-                    }
-                }
-            });
-
-            const avgDuration = validDurationsCount > 0 ? (totalHours / validDurationsCount).toFixed(1) : "0";
-
-            document.getElementById('stat-total-present').textContent = totalPresent;
-            document.getElementById('stat-active-working').textContent = activeWorking;
-            document.getElementById('stat-completed-working').textContent = completedWorking;
-            document.getElementById('stat-avg-duration').textContent = `${avgDuration} jam`;
-        }
-
-        function renderAdminTable() {
-            const tableBody = document.getElementById('attendance-table-body');
-            const emptyState = document.getElementById('table-empty-state');
-            
-            const selectedDate = document.getElementById('filter-date').value;
-            const searchKeyword = document.getElementById('filter-name').value.trim().toLowerCase();
-
-            const filteredRecords = cachedRecords.filter(record => {
-                const matchDate = !selectedDate || record.date === selectedDate;
-                const matchNameOrCode = !searchKeyword || 
-                    record.employeeName.toLowerCase().includes(searchKeyword) || 
-                    record.employeeCode.toLowerCase().includes(searchKeyword);
-                return matchDate && matchNameOrCode;
-            });
-
-            filteredRecords.sort((a, b) => b.id.localeCompare(a.id));
-            tableBody.innerHTML = "";
-
-            if (filteredRecords.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            }
-
-            emptyState.classList.add('hidden');
-
-            filteredRecords.forEach(record => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/70 transition duration-150";
-
-                const formattedDate = formatSimpleDate(record.date);
-
-                tr.innerHTML = `
-                    <td class="py-4 px-6 text-sm font-medium text-slate-600">${formattedDate}</td>
-                    <td class="py-4 px-6 text-sm font-semibold text-indigo-700 font-mono">${record.employeeCode}</td>
-                    <td class="py-4 px-6">
-                        <div class="flex items-center space-x-2.5">
-                            <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs uppercase">
-                                ${record.employeeName.charAt(0)}
-                            </div>
-                            <span class="text-sm font-bold text-slate-800">${record.employeeName}</span>
-                        </div>
-                    </td>
-                    <td class="py-4 px-6 text-sm text-slate-700 text-center font-mono">${record.checkIn || '--:--'}</td>
-                    <td class="py-4 px-6 text-sm text-center font-mono">
-                        ${record.checkOut 
-                            ? `<span class="text-slate-700">${record.checkOut}</span>` 
-                            : `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 animate-pulse"><i class="fa-solid fa-spinner animate-spin mr-1 text-[8px]"></i>Aktif Bekerja</span>`
-                        }
-                    </td>
-                    <td class="py-4 px-6 text-sm text-slate-600 text-center font-semibold">${record.duration}</td>
-                    <td class="py-4 px-6 text-sm text-slate-500 max-w-xs truncate" title="${record.notes || ''}">
-                        ${record.notes || '<span class="text-slate-300 italic">Tidak ada catatan</span>'}
-                    </td>
-                `;
-
-                tableBody.appendChild(tr);
-            });
-        }
-
+   
+   
         function exportDataToCSV() {
             if (cachedRecords.length === 0) {
                 showToast("Gagal Ekspor", "Tidak ada data yang dapat diekspor saat ini.", "warning");
@@ -1202,19 +1116,117 @@
             }, 4000);
         }
 
-        function formatSimpleDate(dateString) {
-    if (!dateString) return "--";
+   
+
+
+
+
+
+
+
+
+        
+        /**
+ * ==========================================
+ * FUNGSI UTILITY PEMROSESAN DATA (BARU)
+ * ==========================================
+ */
+function cleanTime(timeStr) {
+    if (!timeStr || timeStr === "--") return "--";
+    const match = timeStr.match(/(\d{2}):(\d{2}):(\d{2})/);
+    if (match) return `${match[1]}:${match[2]}:${match[3]}`;
+    return timeStr;
+}
+
+function calculateDuration(checkIn, checkOut) {
+    if (!checkIn || !checkOut || checkIn === "--" || checkOut === "--") return "--";
+    
+    const partsIn = checkIn.split(':');
+    const partsOut = checkOut.split(':');
+    
+    if (partsIn.length !== 3 || partsOut.length !== 3) return "--";
+
+    const date1 = new Date(0, 0, 0, parseInt(partsIn[0]), parseInt(partsIn[1]), parseInt(partsIn[2]));
+    const date2 = new Date(0, 0, 0, parseInt(partsOut[0]), parseInt(partsOut[1]), parseInt(partsOut[2]));
+    
+    let diff = (date2 - date1) / 1000;
+    if (diff < 0) return "--";
+    
+    const h = Math.floor(diff / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    return `${h} jam ${m} mnt`;
+}
+
+function formatDate(dateStr) {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toISOString().split('T')[0];
+}
+
+/**
+ * ==========================================
+ * INTEGRASI LOGIKA ADMIN YANG DIPERBARUI
+ * ==========================================
+ */
+
+// Gantikan fungsi refreshDashboardData lama dengan logika fetch baru ini
+async function refreshDashboardData() {
     try {
-        // Memecah string YYYY-MM-DD
-        const parts = dateString.split("-");
-        if (parts.length === 3) {
-            // Mengembalikan format DD/MM/YYYY
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-        return dateString;
-    } catch (e) {
-        return dateString;
+        const rawData = await apiService.fetchAllRecords();
+        // Menggunakan logika pemetaan data yang Anda berikan
+        cachedRecords = rawData.map(r => ({ 
+            ...r,
+            date: formatDate(r.date),
+            checkIn: cleanTime(r.checkIn),
+            checkOut: cleanTime(r.checkOut)
+        }));
+        
+        renderAdminTable();
+        calculateAdminStats();
+    } catch (err) { 
+        console.error(err); 
+        showToast("Error", "Gagal memperbarui data admin.", "error");
     }
+}
+
+function calculateAdminStats() {
+    const todayStr = getLocalDateString();
+    const todayRecords = cachedRecords.filter(r => r.date === todayStr);
+
+    document.getElementById('stat-total-present').textContent = todayRecords.length;
+    document.getElementById('stat-active-working').textContent = todayRecords.filter(r => r.checkIn !== "--" && r.checkOut === "--").length;
+    document.getElementById('stat-completed-working').textContent = todayRecords.filter(r => r.checkIn !== "--" && r.checkOut !== "--").length;
+    // Anda bisa menambahkan logika rata-rata durasi kembali jika diperlukan
+}
+
+function renderAdminTable() {
+    const tableBody = document.getElementById('attendance-table-body');
+    const emptyState = document.getElementById('table-empty-state');
+    
+    const filterDate = document.getElementById('filter-date').value;
+    const filterName = document.getElementById('filter-name').value.toLowerCase();
+
+    const filtered = cachedRecords.filter(r => 
+        (filterDate === "" || r.date === filterDate) &&
+        (r.employeeName.toLowerCase().includes(filterName) || r.employeeCode.toLowerCase().includes(filterName))
+    );
+
+    if (filtered.length === 0) {
+        tableBody.innerHTML = "";
+        emptyState.classList.remove('hidden');
+        return;
+    }
+
+    emptyState.classList.add('hidden');
+    tableBody.innerHTML = filtered.map(r => `
+        <tr class="hover:bg-slate-50 border-b border-slate-100">
+            <td class="py-4 px-6 text-sm text-slate-600">${r.date}</td>
+            <td class="py-4 px-6 text-sm font-bold text-slate-800">${r.employeeName}</td>
+            <td class="py-4 px-6 text-sm text-center font-mono">${r.checkIn}</td>
+            <td class="py-4 px-6 text-sm text-center font-mono">${r.checkOut}</td>
+            <td class="py-4 px-6 text-sm text-center font-semibold text-indigo-600">${calculateDuration(r.checkIn, r.checkOut)}</td>
+        </tr>
+    `).join('');
 }
     </script>
 </body>
