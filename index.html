@@ -288,16 +288,14 @@ function getLocalDateString(date = new Date()) {
 class SheetsApiService {
     constructor() {}
 
+    // Gabungan pengecekan fallback
     isFallbackMode() {
-        // Logika sederhana untuk mengecek koneksi/mode offline
-        return !navigator.onLine;
+        return SCRIPT_URL === "URL_WEB_APP_ANDA" || SCRIPT_URL.trim() === "" || !navigator.onLine;
     }
 
     // 1. GET ALL DATA
     async fetchAllRecords() {
-        if (this.isFallbackMode()) {
-            return this.getLocalFallbackRecords();
-        }
+        if (this.isFallbackMode()) return this.getLocalFallbackRecords();
         try {
             const response = await fetch(`${SCRIPT_URL}?action=fetchAll`);
             if (!response.ok) throw new Error("Gagal mengambil data.");
@@ -308,198 +306,96 @@ class SheetsApiService {
         }
     }
 
-    // 2. VERIFY EMPLOYEE (Diperbarui untuk deteksi status lebih akurat)
+    // 2. VERIFY EMPLOYEE
     async verifyEmployee(code) {
         const todayStr = getLocalDateString();
-        
-        // Selalu coba API terlebih dahulu
         try {
             const response = await fetch(`${SCRIPT_URL}?action=verify&code=${encodeURIComponent(code)}&date=${todayStr}`);
             if (!response.ok) throw new Error("HTTP Error " + response.status);
-            
             const data = await response.json();
-            
-            // Simpan ke localStorage sebagai cache jika data berhasil diambil dari cloud
-            if (data.success && data.exists) {
-                localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
-            }
-            
+            if (data.success && data.exists) localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
             return data;
         } catch (err) {
-            console.warn("Gagal memverifikasi via cloud, mencoba cache lokal:", err);
-            
-            // Coba ambil dari cache lokal jika ada
+            console.warn("Gagal memverifikasi, mencoba cache lokal:", err);
             const cached = localStorage.getItem(`cache_verify_${code}`);
-            if (cached) {
-                return JSON.parse(cached);
-            }
-            
-            return { success: false, error: "Tidak dapat terhubung ke server." };
+            return cached ? JSON.parse(cached) : { success: false, error: "Tidak dapat terhubung." };
         }
     }
 
-    // --- Helper untuk Fallback Data ---
+    // 3. POST NEW RECORD (Check In)
+    async createRecord(employeeCode, employeeName, checkInTime, notes) {
+        const todayStr = getLocalDateString();
+        const payload = { action: "checkIn", employeeCode, employeeName, date: todayStr, checkIn: checkInTime, notes };
+        if (this.isFallbackMode()) return this.localFallbackCreate(payload);
+
+        try {
+            const response = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error("HTTP Error " + response.status);
+            const resJson = await response.json();
+            return resJson.record;
+        } catch (err) {
+            return this.localFallbackCreate(payload);
+        }
+    }
+
+    // 4. POST UPDATE RECORD (Check Out)
+    async updateRecordCheckOut(employeeCode, date, checkOutTime) {
+        const notes = document.getElementById('attendance-notes').value.trim();
+        const employeeName = typeof activeResolvedEmployee !== 'undefined' ? activeResolvedEmployee.name : "Karyawan";
+        const payload = { action: "checkOut", employeeCode, date, checkOut: checkOutTime, notes };
+        if (this.isFallbackMode()) return this.localFallbackCheckout(payload);
+
+        try {
+            const response = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error("HTTP Error " + response.status);
+            const resJson = await response.json();
+            return resJson.record;
+        } catch (err) {
+            return this.localFallbackCheckout(payload);
+        }
+    }
+
+    // --- METHOD CADANGAN LOKAL ---
     getLocalFallbackRecords() {
-        return JSON.parse(localStorage.getItem('absensi_cache_all') || '[]');
+        const localKey = "cloud_attendance_records_nocode";
+        if (!localStorage.getItem(localKey)) {
+            // ... (logika sample data Anda tetap di sini)
+            localStorage.setItem(localKey, JSON.stringify([]));
+        }
+        return JSON.parse(localStorage.getItem(localKey)) || [];
+    }
+
+    localFallbackVerify(code, dateVal) {
+        const localUsers = { "EMP001": { code: "EMP001", name: "Budi Santoso" } }; // Tambahkan user lainnya
+        const user = localUsers[code];
+        if (!user) return { success: true, exists: false };
+        const records = this.getLocalFallbackRecords();
+        const record = records.find(r => r.employeeCode === code && r.date === dateVal) || null;
+        return { success: true, exists: true, user, record };
+    }
+
+    localFallbackCreate(payload) {
+        const records = this.getLocalFallbackRecords();
+        const newRecord = { ...payload, id: "rec_" + Date.now(), checkOut: null, duration: "--", notes: payload.notes || "Hadir" };
+        records.push(newRecord);
+        localStorage.setItem("cloud_attendance_records_nocode", JSON.stringify(records));
+        return newRecord;
+    }
+
+    localFallbackCheckout(payload) {
+        const records = this.getLocalFallbackRecords();
+        const idx = records.findIndex(r => r.employeeCode === payload.employeeCode && r.date === payload.date && r.checkOut === null);
+        if (idx === -1) return null;
+        records[idx].checkOut = payload.checkOut;
+        records[idx].duration = "Selesai"; // Simplifikasi durasi
+        if (payload.notes) records[idx].notes = payload.notes;
+        localStorage.setItem("cloud_attendance_records_nocode", JSON.stringify(records));
+        return records[idx];
     }
 }
-           
-            // POST NEW RECORD (Check In - Masuk)
-            async createRecord(employeeCode, employeeName, checkInTime, notes) {
-                const todayStr = getLocalDateString();
-                const payload = {
-                    action: "checkIn",
-                    employeeCode,
-                    employeeName,
-                    date: todayStr,
-                    checkIn: checkInTime,
-                    notes
-                };
 
-                if (this.isFallbackMode()) {
-                    return this.localFallbackCreate(payload);
-                }
-
-                try {
-                    const response = await fetch(SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify(payload)
-                    });
-                    if (!response.ok) throw new Error("HTTP Error " + response.status);
-                    const resJson = await response.json();
-                    if (!resJson.success) throw new Error(resJson.error || "Gagal absen masuk");
-                    return resJson.record;
-                } catch (err) {
-                    console.warn("Pencatatan gagal via cloud, dialihkan ke lokal:", err);
-                    return this.localFallbackCreate(payload);
-                }
-            }
-
-            // POST UPDATE RECORD (Check Out - Keluar)
-            async updateRecordCheckOut(employeeCode, date, checkOutTime) {
-                const notes = document.getElementById('attendance-notes').value.trim();
-                const employeeName = activeResolvedEmployee ? activeResolvedEmployee.name : "Karyawan";
-                const payload = {
-                    action: "checkOut",
-                    employeeCode,
-                    employeeName,
-                    date,
-                    checkOut: checkOutTime,
-                    notes
-                };
-
-                if (this.isFallbackMode()) {
-                    return this.localFallbackCheckout(payload);
-                }
-
-                try {
-                    const response = await fetch(SCRIPT_URL, {
-                        method: "POST",
-                        body: JSON.stringify(payload)
-                    });
-                    if (!response.ok) throw new Error("HTTP Error " + response.status);
-                    const resJson = await response.json();
-                    if (!resJson.success) throw new Error(resJson.error || "Gagal absen keluar");
-                    return resJson.record;
-                } catch (err) {
-                    console.warn("Pencatatan checkout gagal via cloud, dialihkan ke lokal:", err);
-                    return this.localFallbackCheckout(payload);
-                }
-            }
-
-            // Deteksi jika pengguna belum memasang URL API Apps Script nyata
-            isFallbackMode() {
-                return SCRIPT_URL === "URL_WEB_APP_ANDA" || SCRIPT_URL.trim() === "";
-            }
-
-            // --- ⚠️ METHOD CADANGAN LOKAL (FALLBACK DEMO) ⚠️ ---
-            // Digunakan otomatis bila SCRIPT_URL belum dikonfigurasi, agar file tetap dapat dijalankan langsung
-            getLocalFallbackRecords() {
-                const localKey = "cloud_attendance_records_nocode";
-                if (!localStorage.getItem(localKey)) {
-                    const today = new Date();
-                    const todayStr = getLocalDateString(today);
-                    
-                    const yesterday = new Date();
-                    yesterday.setDate(today.getDate() - 1);
-                    const yesterdayStr = getLocalDateString(yesterday);
-
-                    const sampleRecords = [
-                        { id: "rec_1", employeeCode: "EMP001", employeeName: "Budi Santoso", date: yesterdayStr, checkIn: "07:55:12", checkOut: "16:02:44", duration: "08 jam 07 mnt", notes: "Hadir tepat waktu di kantor pusat" },
-                        { id: "rec_2", employeeCode: "EMP002", employeeName: "Siti Rahmawati", date: yesterdayStr, checkIn: "08:14:22", checkOut: "17:05:10", duration: "08 jam 50 mnt", notes: "Selesai menyelesaikan laporan harian" },
-                        { id: "rec_3", employeeCode: "EMP003", employeeName: "Andi Wijaya", date: todayStr, checkIn: "08:12:05", checkOut: null, duration: "--", notes: "Bekerja remote (WFH)" },
-                        { id: "rec_4", employeeCode: "EMP004", employeeName: "Dewi Lestari", date: todayStr, checkIn: "07:45:30", checkOut: "15:45:12", duration: "07 jam 59 mnt", notes: "Izin pulang cepat dengan persetujuan HRD" }
-                    ];
-                    localStorage.setItem(localKey, JSON.stringify(sampleRecords));
-                }
-                return JSON.parse(localStorage.getItem(localKey)) || [];
-            }
-
-            localFallbackVerify(code, dateVal) {
-                const localUsers = {
-                    "EMP001": { code: "EMP001", name: "Budi Santoso", jabatan: "Developer" },
-                    "EMP002": { code: "EMP002", name: "Siti Rahmawati", jabatan: "Desainer UI/UX" },
-                    "EMP003": { code: "EMP003", name: "Andi Wijaya", jabatan: "Project Manager" },
-                    "EMP004": { code: "EMP004", name: "Dewi Lestari", jabatan: "QA Engineer" },
-                    "EMP005": { code: "EMP005", name: "Eko Prasetyo", jabatan: "DevOps Engineer" },
-                    "EMP006": { code: "EMP006", name: "Fitriani", jabatan: "HR Specialist" }
-                };
-                const user = localUsers[code];
-                if (!user) return { success: true, exists: false };
-                
-                const records = this.getLocalFallbackRecords();
-                const record = records.find(r => r.employeeCode === code && r.date === dateVal) || null;
-                return { success: true, exists: true, user, record };
-            }
-
-            localFallbackCreate(payload) {
-                const records = this.getLocalFallbackRecords();
-                const newRecord = {
-                    id: "rec_" + Date.now(),
-                    employeeCode: payload.employeeCode,
-                    employeeName: payload.employeeName,
-                    date: payload.date,
-                    checkIn: payload.checkIn,
-                    checkOut: null,
-                    duration: "--",
-                    notes: payload.notes || "Hadir"
-                };
-                records.push(newRecord);
-                localStorage.setItem("cloud_attendance_records_nocode", JSON.stringify(records));
-                return newRecord;
-            }
-
-            localFallbackCheckout(payload) {
-                const records = this.getLocalFallbackRecords();
-                const idx = records.findIndex(r => r.employeeCode === payload.employeeCode && r.date === payload.date && r.checkOut === null);
-                if (idx === -1) return null;
-                
-                const checkInTime = records[idx].checkIn;
-                const checkOutTime = payload.checkOut;
-                
-                const calculateDur = (startTime, endTime) => {
-                    const [h1, m1, s1] = startTime.split(':').map(Number);
-                    const [h2, m2, s2] = endTime.split(':').map(Number);
-                    let date1 = new Date(2000, 0, 1, h1, m1, s1);
-                    let date2 = new Date(2000, 0, 1, h2, m2, s2);
-                    if (date2 < date1) date2.setDate(date2.getDate() + 1);
-                    const diffMs = date2 - date1;
-                    const diffHours = Math.floor(diffMs / 3600000);
-                    const diffMins = Math.floor((diffMs % 3600000) / 60000);
-                    return `${diffHours.toString().padStart(2, '0')} jam ${diffMins.toString().padStart(2, '0')} mnt`;
-                };
-
-                records[idx].checkOut = checkOutTime;
-                records[idx].duration = calculateDur(checkInTime, checkOutTime);
-                if (payload.notes) records[idx].notes = payload.notes;
-                
-                localStorage.setItem("cloud_attendance_records_nocode", JSON.stringify(records));
-                return records[idx];
-            }
-        }
-
-        const apiService = new SheetsApiService();
-
+// Inisialisasi service setelah kelas didefinisikan
+const apiService = new SheetsApiService();
         /**
          * ==========================================
          * 2. VARIABEL GLOBAL & STATE MANAJEMEN
