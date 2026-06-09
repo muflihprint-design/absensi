@@ -353,25 +353,38 @@ async verifyEmployee(code) {
 
         const data = await response.json();
         
-        if (data.success && data.exists) {
-            // Simpan ke cache
-            localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
+if (data.success && data.exists) {
+    localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
 
-            // Logika Update UI Tombol Masuk
-            const checkInBtn = document.getElementById('btn-check-in');
-            if (checkInBtn) {
-                // Jika sudah ada record (masuk atau keluar), tombol dimatikan
-                checkInBtn.disabled = (data.record !== null);
-            }
+    // Update UI Tombol
+    const checkInBtn = document.getElementById('btn-check-in');
+    if (checkInBtn) {
+        // Jika data.record ada (bukan null), berarti sudah absen
+        checkInBtn.disabled = (data.record !== null);
+    }
 
-            // Logika Notifikasi
-            if (data.record) {
-                const statusMsg = data.record.checkOut !== "--" 
-                    ? "Anda sudah absen Masuk dan Keluar hari ini." 
-                    : "Anda sudah absen Masuk.";
-                console.info("Status Absen:", statusMsg);
-            }
+    // Logika Notifikasi yang lebih aman
+    if (data.record) {
+        let statusMsg = "";
+        // Cek apakah checkOut ada dan isinya bukan "--" atau null
+        const hasCheckOut = data.record.checkOut && data.record.checkOut !== "--";
+        const hasCheckIn = data.record.checkIn && data.record.checkIn !== "--";
+
+        if (hasCheckOut) {
+            statusMsg = "Anda sudah absen Masuk dan Keluar hari ini.";
+        } else if (hasCheckIn) {
+            statusMsg = "Anda sudah absen Masuk.";
+        } else {
+            statusMsg = "Data absen ditemukan, namun status tidak lengkap.";
         }
+        
+        console.info("Status Absen:", statusMsg);
+        // Jika ingin muncul di layar, hilangkan komentar baris di bawah:
+        // alert(statusMsg); 
+    } else {
+        console.info("Status Absen: Belum ada record hari ini.");
+    }
+}
         
         return data;
     } catch (err) {
