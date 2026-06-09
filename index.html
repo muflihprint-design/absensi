@@ -364,26 +364,25 @@ if (data.success && data.exists) {
     }
 
     // Logika Notifikasi yang lebih aman
-    if (data.record) {
-        let statusMsg = "";
-        // Cek apakah checkOut ada dan isinya bukan "--" atau null
-        const hasCheckOut = data.record.checkOut && data.record.checkOut !== "--";
-        const hasCheckIn = data.record.checkIn && data.record.checkIn !== "--";
+  if (data.record) {
+    // Cek apakah checkOut ada dan isinya bukan "--" atau null
+    const hasCheckOut = data.record.checkOut && data.record.checkOut !== "--";
+    const hasCheckIn = data.record.checkIn && data.record.checkIn !== "--";
 
-        if (hasCheckOut) {
-            statusMsg = "Anda sudah absen Masuk dan Keluar hari ini.";
-        } else if (hasCheckIn) {
-            statusMsg = "Anda sudah absen Masuk.";
-        } else {
-            statusMsg = "Data absen ditemukan, namun status tidak lengkap.";
-        }
-        
+    if (hasCheckOut) {
+        // Notifikasi hanya muncul jika sudah absen pulang (selesai)
+        const statusMsg = "Anda sudah absen Masuk dan Keluar hari ini.";
         console.info("Status Absen:", statusMsg);
-        // Jika ingin muncul di layar, hilangkan komentar baris di bawah:
         alert(statusMsg); 
+    } else if (hasCheckIn) {
+        // Cukup log ke console, tidak perlu alert agar tidak mengganggu
+        console.info("Status Absen: Anda sudah absen Masuk. Siap untuk absen Keluar.");
     } else {
-        console.info("Status Absen: Belum ada record hari ini.");
+        console.info("Status Absen: Data absen ditemukan, namun status tidak lengkap.");
     }
+} else {
+    console.info("Status Absen: Belum ada record hari ini.");
+}
 }
         
         return data;
