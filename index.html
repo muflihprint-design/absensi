@@ -705,22 +705,31 @@ async function performAutoCheckIn() {
         }
 
         function showButtonLoading(buttonEl, isLoading) {
-            const textSpan = buttonEl.querySelector('.btn-text');
-            const spinnerSpan = buttonEl.querySelector('.btn-spinner');
+    // Tambahkan baris ini untuk mencegah error jika elemen null
+    if (!buttonEl) {
+        console.warn("showButtonLoading dipanggil dengan elemen null, diabaikan.");
+        return;
+    }
 
-            if (isLoading) {
-                buttonEl.disabled = true;
-                textSpan.style.visibility = 'hidden';
-                spinnerSpan.classList.remove('hidden');
-                spinnerSpan.classList.add('flex');
-            } else {
-                buttonEl.disabled = false;
-                textSpan.style.visibility = 'visible';
-                spinnerSpan.classList.add('hidden');
-                spinnerSpan.classList.remove('flex');
-            }
+    const textSpan = buttonEl.querySelector('.btn-text');
+    const spinnerSpan = buttonEl.querySelector('.btn-spinner');
+
+    if (isLoading) {
+        buttonEl.disabled = true;
+        if (textSpan) textSpan.style.visibility = 'hidden'; // Tambahkan pengecekan juga
+        if (spinnerSpan) {
+            spinnerSpan.classList.remove('hidden');
+            spinnerSpan.classList.add('flex');
         }
-
+    } else {
+        buttonEl.disabled = false;
+        if (textSpan) textSpan.style.visibility = 'visible';
+        if (spinnerSpan) {
+            spinnerSpan.classList.add('hidden');
+            spinnerSpan.classList.remove('flex');
+        }
+    }
+}
         function updateUserStatusDisplay(employeeName, employeeCode, record) {
     const notStartedCard = document.getElementById('status-not-started');
     const loggedInCard = document.getElementById('status-logged-in');
