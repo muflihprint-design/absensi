@@ -743,29 +743,29 @@ async function performAutoCheckIn() {
         }
     }
 }
+        
         function updateUserStatusDisplay(employeeName, employeeCode, record) {
     const notStartedCard = document.getElementById('status-not-started');
     const loggedInCard = document.getElementById('status-logged-in');
     const completedCard = document.getElementById('status-completed');
-    
-    // Pastikan tombol Keluar ada sebelum diakses
     const checkOutBtn = document.getElementById('btn-check-out');
 
-    // Helper untuk mengecek apakah checkOut sudah valid
+    // 1. KUNCI PENGAMAN (Guard Clause)
+    // Jangan lakukan perubahan apapun jika tombol tidak ditemukan
+    if (!checkOutBtn) return;
+
+    // 2. Tentukan status dari data record
     const isCheckedOut = record && record.checkOut && record.checkOut !== "--" && record.checkOut !== "";
 
-    // 1. Reset tampilan awal
-    if (checkOutBtn) {
-        checkOutBtn.disabled = true;
-        checkOutBtn.textContent = "Keluar"; // Reset teks ke default
-    }
-
-    // 2. Logika Penampilan Kartu & Status Tombol
+    // 3. LOGIKA STATE YANG EKSKLUSIF (Menggunakan if-else yang ketat)
     if (!record) {
         // BELUM ABSEN
         notStartedCard.classList.remove('hidden');
         loggedInCard.classList.add('hidden');
         completedCard.classList.add('hidden');
+        
+        checkOutBtn.disabled = true; // Tetap dikunci
+        checkOutBtn.textContent = "Keluar";
     } 
     else if (record.checkIn && !isCheckedOut) {
         // SUDAH MASUK, BELUM PULANG
@@ -773,26 +773,21 @@ async function performAutoCheckIn() {
         loggedInCard.classList.remove('hidden');
         completedCard.classList.add('hidden');
         
-        // Aktifkan tombol keluar
-        if (checkOutBtn) {
-            checkOutBtn.disabled = false;
-        }
+        checkOutBtn.disabled = false; // HANYA DI SINI TOMBOL DI-ENABLE
+        checkOutBtn.textContent = "Keluar";
     } 
     else if (record.checkIn && isCheckedOut) {
-        // SUDAH SELESAI (MASUK & KELUAR)
+        // SUDAH SELESAI
         notStartedCard.classList.add('hidden');
         loggedInCard.classList.add('hidden');
         completedCard.classList.remove('hidden');
 
-        // Isi data ringkasan
         document.getElementById('summary-check-in').textContent = record.checkIn;
         document.getElementById('summary-check-out').textContent = record.checkOut;
 
-        // Tombol keluar tetap disabled dan beri keterangan
-        if (checkOutBtn) {
-            checkOutBtn.disabled = true;
-            checkOutBtn.textContent = "Selesai Hari Ini";
-        }
+        // PENGUNCIAN TEGAS
+        checkOutBtn.disabled = true; 
+        checkOutBtn.textContent = "Selesai Hari Ini";
     }
 }
 
