@@ -356,12 +356,7 @@ if (data.success && data.exists) {
     localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
 
     // Update UI Tombol
-    const checkInBtn = document.getElementById('btn-check-in');
-    if (checkInBtn) {
-        // Jika data.record ada (bukan null), berarti sudah absen
-        checkInBtn.disabled = (data.record !== null);
-    }
-
+    
     // Logika Notifikasi yang lebih aman
   if (data.record) {
     // Cek apakah checkOut ada dan isinya bukan "--" atau null
@@ -394,11 +389,7 @@ if (data.success && data.exists) {
             data.isCached = true;
             
             // Pastikan tombol tetap ter-disable jika data dari cache menunjukkan sudah absen
-            const checkInBtn = document.getElementById('btn-check-in');
-            if (checkInBtn && data.record) {
-                checkInBtn.disabled = true;
-            }
-            
+                        
             return data;
         }
         
@@ -586,7 +577,6 @@ const apiService = new SheetsApiService();
     const resolvedNameText = document.getElementById('employee-resolved-name');
     const verificationBadge = document.getElementById('verification-badge');
     
-    const checkInBtn = document.getElementById('btn-check-in');
     const checkOutBtn = document.getElementById('btn-check-out');
     const noteInput = document.getElementById('attendance-notes');
 
@@ -633,41 +623,13 @@ const apiService = new SheetsApiService();
                 verificationBadge.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
                 
                 // Reset tombol dan status panel
-                checkInBtn.disabled = true;
                 checkOutBtn.disabled = true;
                 resetStatusPanelToVerificationRequired();
             }
         }, 600);
     });
             // LOGIKA KLIK TOMBOL ABSEN MASUK
-            checkInBtn.addEventListener('click', async () => {
-                if (!activeResolvedEmployee) {
-                    showToast("Validasi Gagal", "Masukkan kode karyawan yang valid terlebih dahulu!", "warning");
-                    return;
-                }
-
-                showButtonLoading(checkInBtn, true);
-                
-                try {
-                    const now = new Date();
-                    const checkInTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-                    
-                    const result = await apiService.createRecord(
-                        activeResolvedEmployee.code, 
-                        activeResolvedEmployee.name, 
-                        checkInTime, 
-                        noteInput.value.trim()
-                    );
-                    
-                    updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
-                    noteInput.value = ""; 
-                    showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}! Jam masuk tersimpan.`, "success");
-                } catch (error) {
-                    showToast("Gagal Tersimpan", "Gagal mengirim data presensi ke server cloud.", "error");
-                } finally {
-                    showButtonLoading(checkInBtn, false);
-                }
-            });
+          );
 
             // LOGIKA KLIK TOMBOL ABSEN KELUAR
             checkOutBtn.addEventListener('click', async () => {
@@ -704,8 +666,7 @@ const apiService = new SheetsApiService();
 
 async function performAutoCheckIn() {
     // Hapus baris yang merujuk ke btn-check-in jika tombol sudah dihapus dari HTML
-    // const checkInBtn = document.getElementById('btn-check-in');
-    // showButtonLoading(checkInBtn, true); // Hapus/comment baris ini
+   
     
     try {
         const now = new Date();
@@ -723,7 +684,7 @@ async function performAutoCheckIn() {
     } catch (error) {
         showToast("Gagal Tersimpan", "Gagal mengirim data ke server.", "error");
     } 
-    // finally { showButtonLoading(checkInBtn, false); } // Hapus/comment baris ini
+   
 }
         
         function resetVerificationUI(placeholderMsg) {
@@ -731,7 +692,6 @@ async function performAutoCheckIn() {
             document.getElementById('employee-resolved-name').textContent = placeholderMsg;
             document.getElementById('employee-resolved-name').className = "text-xs font-semibold text-slate-400 italic";
             document.getElementById('verification-badge').classList.add('hidden');
-            document.getElementById('btn-check-in').disabled = true;
             document.getElementById('btn-check-out').disabled = true;
             resetStatusPanelToVerificationRequired();
         }
@@ -767,52 +727,49 @@ async function performAutoCheckIn() {
     const loggedInCard = document.getElementById('status-logged-in');
     const completedCard = document.getElementById('status-completed');
     
-    const checkInBtn = document.getElementById('btn-check-in');
+    // Pastikan tombol Keluar ada sebelum diakses
     const checkOutBtn = document.getElementById('btn-check-out');
 
-    // Default: Tombol Masuk mati, Tombol Keluar mati
-    checkInBtn.disabled = true;
-    checkOutBtn.disabled = true;
+    // 1. Reset awal: Matikan tombol Keluar
+    if (checkOutBtn) {
+        checkOutBtn.disabled = true;
+    }
 
-    const isSunday = new Date().getDay() === 0;
-    if (isSunday) return; // Jika Minggu, biarkan semua disabled
-
+    // 2. Status Berdasarkan Data Record
     if (!record) {
-        // BELUM ABSEN SAMA SEKALI
+        // BELUM ABSEN: Tampilkan kartu awal
         notStartedCard.classList.remove('hidden');
         loggedInCard.classList.add('hidden');
         completedCard.classList.add('hidden');
-        
-        // Aktifkan Masuk
-        checkInBtn.disabled = false;
     } 
- else if (record.checkIn && (record.checkOut === null || record.checkOut === "--" || record.checkOut === "")) {
-    // SUDAH MASUK, BELUM PULANG
-    loggedInCard.classList.remove('hidden');
-    checkInBtn.disabled = true; 
-    checkOutBtn.disabled = false; // Pastikan ini jalan
-    console.log("Tombol Keluar diaktifkan");
-} 
+    else if (record.checkIn && (record.checkOut === null || record.checkOut === "--" || record.checkOut === "")) {
+        // SUDAH MASUK, BELUM PULANG: Tampilkan kartu login
+        notStartedCard.classList.add('hidden');
+        loggedInCard.classList.remove('hidden');
+        completedCard.classList.add('hidden');
+        
+        // Aktifkan tombol keluar
+        if (checkOutBtn) {
+            checkOutBtn.disabled = false;
+        }
+    } 
     else if (record.checkIn && record.checkOut) {
-        // SUDAH SELESAI (MASUK & KELUAR)
+        // SUDAH SELESAI (MASUK & KELUAR): Tampilkan kartu selesai
         notStartedCard.classList.add('hidden');
         loggedInCard.classList.add('hidden');
         completedCard.classList.remove('hidden');
 
+        // Isi data ringkasan
         document.getElementById('summary-check-in').textContent = record.checkIn;
         document.getElementById('summary-check-out').textContent = record.checkOut;
 
-        // Keduanya disabled karena sudah tuntas hari ini
-        checkInBtn.disabled = true;
-        checkOutBtn.disabled = true;
+        // Tombol keluar tetap disabled
+        if (checkOutBtn) {
+            checkOutBtn.disabled = true;
+        }
     }
 }
 
-        /**
-         * ==========================================
-         * 5. HALAMAN ADMIN (DASHBOARD LOGIC)
-         * ==========================================
-         */
         function setupAdminDashboard() {
             const filterDateInput = document.getElementById('filter-date');
             const filterNameInput = document.getElementById('filter-name');
