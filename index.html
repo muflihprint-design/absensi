@@ -632,28 +632,41 @@ const apiService = new SheetsApiService();
 
             // LOGIKA KLIK TOMBOL ABSEN KELUAR
             checkOutBtn.addEventListener('click', async () => {
-                if (!activeResolvedEmployee) {
-                    showToast("Validasi Gagal", "Masukkan kode karyawan yang valid!", "warning");
-                    return;
-                }
+    if (!activeResolvedEmployee) {
+        showToast("Validasi Gagal", "Masukkan kode karyawan yang valid!", "warning");
+        return;
+    }
 
-                showButtonLoading(checkOutBtn, true);
+    // 1. DISABLE SEGERA SAAT DIKLIK
+    checkOutBtn.disabled = true;
+    checkOutBtn.textContent = "Memproses..."; // Opsional: Beri feedback visual
+    
+    // Tampilkan loading di dalam tombol (jika fungsi ini ada di project Anda)
+    showButtonLoading(checkOutBtn, true);
 
-                try {
-                    const now = new Date();
-                    const checkOutTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-                    const todayStr = getLocalDateString(now);
+    try {
+        const now = new Date();
+        const checkOutTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        const todayStr = getLocalDateString(now);
 
-                    const result = await apiService.updateRecordCheckOut(activeResolvedEmployee.code, todayStr, checkOutTime);
-                    
-                    updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
-                    showToast("Sukses Pulang", `Terima kasih, ${activeResolvedEmployee.name}. Absen keluar Anda tersimpan.`, "success");
-                } catch (error) {
-                    showToast("Terjadi Kendala", error.message || "Gagal melakukan absensi keluar.", "error");
-                } finally {
-                    showButtonLoading(checkOutBtn, false);
-                }
-            });
+        const result = await apiService.updateRecordCheckOut(activeResolvedEmployee.code, todayStr, checkOutTime);
+        
+        // Update UI jika berhasil
+        updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
+        showToast("Sukses Pulang", `Terima kasih, ${activeResolvedEmployee.name}. Absen keluar Anda tersimpan.`, "success");
+        
+    } catch (error) {
+        // 2. ENABLE KEMBALI JIKA TERJADI ERROR
+        checkOutBtn.disabled = false;
+        checkOutBtn.textContent = "Keluar"; // Kembalikan teks asli
+        
+        showToast("Terjadi Kendala", error.message || "Gagal melakukan absensi keluar. Silakan coba lagi.", "error");
+        
+    } finally {
+        // Matikan loading spinner
+        showButtonLoading(checkOutBtn, false);
+    }
+});
         }
 
         // Fungsi utilitas helper demo untuk mengisi kode secara instan
