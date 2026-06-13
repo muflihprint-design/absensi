@@ -609,19 +609,25 @@ const apiService = new SheetsApiService();
         verificationBadge.classList.remove('hidden');
 
         debounceTimer = setTimeout(async () => {
-            const response = await apiService.verifyEmployee(enteredCode);
-            
-            if (response && response.success && response.exists) {
-                const { user, record } = response;
-                activeResolvedEmployee = { code: user.code, name: user.name };
+          const response = await apiService.verifyEmployee(enteredCode);
+    
+    if (response && response.success && response.exists) {
+        const { user, record } = response;
+        activeResolvedEmployee = { code: user.code, name: user.name };
 
-                resolvedNameText.textContent = `Karyawan Teridentifikasi: ${user.name}`;
-                resolvedNameText.className = "text-xs font-bold text-emerald-600";
-                verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+        resolvedNameText.textContent = `Karyawan Teridentifikasi: ${user.name}`;
+        resolvedNameText.className = "text-xs font-bold text-emerald-600";
+        verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
 
-                // Fungsi ini sudah mengatur disabled state tombol secara otomatis
-                updateUserStatusDisplay(user.name, user.code, record);
-            } else {
+        // LOGIKA OTOMATIS: Jika record masih null (belum absen), langsung jalankan check-in
+        if (record === null) {
+            console.log("Mendeteksi belum absen, melakukan auto check-in...");
+            await performAutoCheckIn();
+        } else {
+            // Jika sudah ada record, tampilkan status biasa
+            updateUserStatusDisplay(user.name, user.code, record);
+        }
+    } else {
                 activeResolvedEmployee = null;
                 resolvedNameText.textContent = "Kode karyawan tidak terdaftar.";
                 resolvedNameText.className = "text-xs font-semibold text-rose-500";
@@ -697,6 +703,32 @@ const apiService = new SheetsApiService();
             codeInput.dispatchEvent(new Event('input'));
         }
 
+async function performAutoCheckIn() {
+    const checkInBtn = document.getElementById('btn-check-in');
+    const noteInput = document.getElementById('attendance-notes');
+    
+    showButtonLoading(checkInBtn, true);
+    
+    try {
+        const now = new Date();
+        const checkInTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        
+        const result = await apiService.createRecord(
+            activeResolvedEmployee.code, 
+            activeResolvedEmployee.name, 
+            checkInTime, 
+            "Absen Otomatis via Input Kode"
+        );
+        
+        updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
+        showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}! Jam masuk tersimpan otomatis.`, "success");
+    } catch (error) {
+        showToast("Gagal Tersimpan", "Gagal mengirim data presensi ke server cloud.", "error");
+    } finally {
+        showButtonLoading(checkInBtn, false);
+    }
+}
+        
         function resetVerificationUI(placeholderMsg) {
             activeResolvedEmployee = null;
             document.getElementById('employee-resolved-name').textContent = placeholderMsg;
