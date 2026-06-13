@@ -111,7 +111,6 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 pt-2">
-                    <button id="btn-check-in" type="button" disabled class="py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-40 transition">Masuk</button>
                     <button id="btn-check-out" type="button" disabled class="py-3 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 disabled:opacity-40 transition">Keluar</button>
                 </div>
             </form>
@@ -704,10 +703,9 @@ const apiService = new SheetsApiService();
         }
 
 async function performAutoCheckIn() {
-    const checkInBtn = document.getElementById('btn-check-in');
-    const noteInput = document.getElementById('attendance-notes');
-    
-    showButtonLoading(checkInBtn, true);
+    // Hapus baris yang merujuk ke btn-check-in jika tombol sudah dihapus dari HTML
+    // const checkInBtn = document.getElementById('btn-check-in');
+    // showButtonLoading(checkInBtn, true); // Hapus/comment baris ini
     
     try {
         const now = new Date();
@@ -717,16 +715,15 @@ async function performAutoCheckIn() {
             activeResolvedEmployee.code, 
             activeResolvedEmployee.name, 
             checkInTime, 
-            "Absen Otomatis via Input Kode"
+            "Absen Otomatis"
         );
         
         updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
-        showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}! Jam masuk tersimpan otomatis.`, "success");
+        showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
     } catch (error) {
-        showToast("Gagal Tersimpan", "Gagal mengirim data presensi ke server cloud.", "error");
-    } finally {
-        showButtonLoading(checkInBtn, false);
-    }
+        showToast("Gagal Tersimpan", "Gagal mengirim data ke server.", "error");
+    } 
+    // finally { showButtonLoading(checkInBtn, false); } // Hapus/comment baris ini
 }
         
         function resetVerificationUI(placeholderMsg) {
