@@ -495,8 +495,7 @@ const apiService = new SheetsApiService();
          */
         document.addEventListener("DOMContentLoaded", () => {
             initRealtimeClock();
-            checkAndLockForSunday();
-            setupTabNavigation();
+           setupTabNavigation();
             setupAttendanceForm();
             setupAdminDashboard();
             refreshDashboardData(); 
@@ -546,22 +545,7 @@ const apiService = new SheetsApiService();
     setInterval(updateTime, 1000);
 }
         
-        function checkAndLockForSunday() {
-            const now = new Date();
-            const isSunday = now.getDay() === 0;
-
-            if (isSunday) {
-                const checkInBtn = document.getElementById('btn-check-in');
-                const checkOutBtn = document.getElementById('btn-check-out');
-                const warningBox = document.getElementById('sunday-warning');
-
-                checkInBtn.disabled = true;
-                checkOutBtn.disabled = true;
-                warningBox.classList.remove('hidden');
-                
-                showToast("Hari Minggu Terdeteksi!", "Hari ini adalah hari libur kerja. Sistem absensi ditutup sementara.", "warning");
-            }
-        }
+        
 
         function setupTabNavigation() {
             tabUserBtn.addEventListener('click', () => {
