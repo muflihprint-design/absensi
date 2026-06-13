@@ -738,20 +738,24 @@ async function performAutoCheckIn() {
     // Pastikan tombol Keluar ada sebelum diakses
     const checkOutBtn = document.getElementById('btn-check-out');
 
-    // 1. Reset awal: Matikan tombol Keluar
+    // Helper untuk mengecek apakah checkOut sudah valid
+    const isCheckedOut = record && record.checkOut && record.checkOut !== "--" && record.checkOut !== "";
+
+    // 1. Reset tampilan awal
     if (checkOutBtn) {
         checkOutBtn.disabled = true;
+        checkOutBtn.textContent = "Keluar"; // Reset teks ke default
     }
 
-    // 2. Status Berdasarkan Data Record
+    // 2. Logika Penampilan Kartu & Status Tombol
     if (!record) {
-        // BELUM ABSEN: Tampilkan kartu awal
+        // BELUM ABSEN
         notStartedCard.classList.remove('hidden');
         loggedInCard.classList.add('hidden');
         completedCard.classList.add('hidden');
     } 
-    else if (record.checkIn && (record.checkOut === null || record.checkOut === "--" || record.checkOut === "")) {
-        // SUDAH MASUK, BELUM PULANG: Tampilkan kartu login
+    else if (record.checkIn && !isCheckedOut) {
+        // SUDAH MASUK, BELUM PULANG
         notStartedCard.classList.add('hidden');
         loggedInCard.classList.remove('hidden');
         completedCard.classList.add('hidden');
@@ -761,8 +765,8 @@ async function performAutoCheckIn() {
             checkOutBtn.disabled = false;
         }
     } 
-    else if (record.checkIn && record.checkOut) {
-        // SUDAH SELESAI (MASUK & KELUAR): Tampilkan kartu selesai
+    else if (record.checkIn && isCheckedOut) {
+        // SUDAH SELESAI (MASUK & KELUAR)
         notStartedCard.classList.add('hidden');
         loggedInCard.classList.add('hidden');
         completedCard.classList.remove('hidden');
@@ -771,9 +775,10 @@ async function performAutoCheckIn() {
         document.getElementById('summary-check-in').textContent = record.checkIn;
         document.getElementById('summary-check-out').textContent = record.checkOut;
 
-        // Tombol keluar tetap disabled
+        // Tombol keluar tetap disabled dan beri keterangan
         if (checkOutBtn) {
             checkOutBtn.disabled = true;
+            checkOutBtn.textContent = "Selesai Hari Ini";
         }
     }
 }
