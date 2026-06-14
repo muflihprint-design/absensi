@@ -681,7 +681,7 @@ codeInput.disabled = true;
         checkOutTime
     );
 
-    //updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
+    updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
     showToast("Sukses Pulang", `Terima kasih, ${activeResolvedEmployee.name}. Absen keluar Anda tersimpan.`, "success");
     
 } catch (error) {
@@ -692,6 +692,8 @@ codeInput.disabled = true;
     showButtonLoading(checkOutBtn, false);
 }
     });
+        codeInput.disabled = false;
+             codeInput.focus();
 } // <--- Hanya ada SATU penutup di sini
         
         // Fungsi utilitas helper demo untuk mengisi kode secara instan
