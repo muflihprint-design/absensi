@@ -724,25 +724,21 @@ async function performAutoCheckIn() {
             document.getElementById('status-placeholder-text').textContent = "Ketik kode karyawan aktif Anda di form kiri untuk membuka menu penulisan absensi.";
         }
 
-        function showButtonLoading(buttonEl, isLoading) {
-    // Tambahkan baris ini untuk mencegah error jika elemen null
-    if (!buttonEl) {
-        console.warn("showButtonLoading dipanggil dengan elemen null, diabaikan.");
-        return;
-    }
+function showButtonLoading(buttonEl, isLoading) {
+    if (!buttonEl) return;
 
     const textSpan = buttonEl.querySelector('.btn-text');
     const spinnerSpan = buttonEl.querySelector('.btn-spinner');
 
     if (isLoading) {
-        buttonEl.disabled = true;
-        if (textSpan) textSpan.style.visibility = 'hidden'; // Tambahkan pengecekan juga
+        // Hapus: buttonEl.disabled = true; (Logika ini pindahkan ke event listener)
+        if (textSpan) textSpan.style.visibility = 'hidden';
         if (spinnerSpan) {
             spinnerSpan.classList.remove('hidden');
             spinnerSpan.classList.add('flex');
         }
     } else {
-        buttonEl.disabled = false;
+        // Hapus: buttonEl.disabled = false; (Logika ini pindahkan ke event listener)
         if (textSpan) textSpan.style.visibility = 'visible';
         if (spinnerSpan) {
             spinnerSpan.classList.add('hidden');
