@@ -685,9 +685,7 @@ const apiService = new SheetsApiService();
         }
 
 async function performAutoCheckIn() {
-    // Hapus baris yang merujuk ke btn-check-in jika tombol sudah dihapus dari HTML
    
-    
     try {
         const now = new Date();
         const checkInTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
@@ -698,6 +696,9 @@ async function performAutoCheckIn() {
             checkInTime, 
             "Absen Otomatis"
         );
+
+
+        await kirimNotifikasiAbsen(employeeName, "MASUK", checkInTime);
         
         updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
         showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
