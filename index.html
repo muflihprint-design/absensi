@@ -299,7 +299,7 @@
     <!-- LOGIKA JAVASCRIPT & ARSITEKTUR APLIKASI      -->
     <!-- ============================================ -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw04O1yrdw_sFfwYz7icxAHqeYj3X3qcvkXzPjRwYH--RytgXTxJVH6wATPisdUW5HplA/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3DCFpRFXe7aTE4gW5MzISz32xd5XlEJWxzJTGoM8ZU8HKybJENuzP1qRwXQFRtzUg/exec"; 
         
 function getLocalDateString(date = new Date()) {
     // Memastikan waktu lokal benar
@@ -1015,6 +1015,35 @@ function renderAdminTable() {
             <td class="py-4 px-6 text-sm text-center font-semibold text-indigo-600">${calculateDuration(r.checkIn, r.checkOut)}</td>
         </tr>
     `).join('');
+}
+
+        // Data semua karyawan (bisa diambil dari database/array statis)
+const semuaKaryawan = ["Budi", "Ani", "Citra", "Dedi"]; 
+
+async function kirimNotifikasiAbsen(karyawanAbsen, tipeAbsen, jam) {
+    // 1. Ambil data absen hari ini dari cachedRecords
+    const hariIni = getLocalDateString();
+    const sudahAbsen = cachedRecords
+        .filter(r => r.date === hariIni && r.checkIn !== "--")
+        .map(r => r.employeeName);
+
+    // 2. Tentukan siapa yang belum absen
+    const belumAbsen = semuaKaryawan.filter(nama => !sudahAbsen.includes(nama));
+    
+    // 3. Susun isi pesan
+    let pesan = `<b>Status Absensi</b>\n\n`;
+    pesan += `👤 ${karyawanAbsen} baru saja melakukan absen ${tipeAbsen} pada jam ${jam}.\n\n`;
+    pesan += `⚠️ <b>Daftar Karyawan Belum Absen:</b>\n`;
+    pesan += belumAbsen.length > 0 ? belumAbsen.join('\n') : "Semua karyawan sudah absen.";
+
+    // 4. Kirim ke Backend untuk diteruskan ke Telegram
+    await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: "sendTelegram",
+            message: pesan
+        })
+    });
 }
  
     </script>
