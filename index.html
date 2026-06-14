@@ -696,12 +696,10 @@ async function performAutoCheckIn() {
             checkInTime, 
             "Absen Otomatis"
         );
-
-
-        await kirimNotifikasiAbsen(activeResolvedEmployee.name, "MASUK", checkInTime);
-        
+               
         updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
         showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
+        await kirimNotifikasiAbsen(activeResolvedEmployee.name, "MASUK", checkInTime);
     } catch (error) {
         showToast("Gagal Tersimpan", "Gagal mengirim data ke server.", "error");
     } 
