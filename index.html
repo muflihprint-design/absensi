@@ -652,21 +652,28 @@ const apiService = new SheetsApiService();
         checkOutBtn.textContent = "Memproses...";
         showButtonLoading(checkOutBtn, true);
 
-        try {
-            const now = new Date();
-            const checkOutTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-            const todayStr = getLocalDateString(now);
+      try {
+    const now = new Date();
+    const checkOutTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const todayStr = getLocalDateString(now);
 
-            const result = await apiService.updateRecordCheckOut(activeResolvedEmployee.code, todayStr, checkOutTime);
-            updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
-            showToast("Sukses Pulang", `Terima kasih, ${activeResolvedEmployee.name}. Absen keluar Anda tersimpan.`, "success");
-        } catch (error) {
-            checkOutBtn.disabled = false;
-            checkOutBtn.textContent = "Keluar";
-            showToast("Terjadi Kendala", error.message || "Gagal melakukan absensi keluar. Silakan coba lagi.", "error");
-        } finally {
-            showButtonLoading(checkOutBtn, false);
-        }
+    // KODE DIPERBARUI: Menambahkan activeResolvedEmployee.name sebagai argumen kedua
+    const result = await apiService.createCheckOutRecord(
+        activeResolvedEmployee.code, 
+        activeResolvedEmployee.name, // Pastikan nama dikirim di sini
+        checkOutTime
+    );
+
+    updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
+    showToast("Sukses Pulang", `Terima kasih, ${activeResolvedEmployee.name}. Absen keluar Anda tersimpan.`, "success");
+    
+} catch (error) {
+    checkOutBtn.disabled = false;
+    checkOutBtn.textContent = "Keluar";
+    showToast("Terjadi Kendala", error.message || "Gagal melakukan absensi keluar. Silakan coba lagi.", "error");
+} finally {
+    showButtonLoading(checkOutBtn, false);
+}
     });
 } // <--- Hanya ada SATU penutup di sini
         
