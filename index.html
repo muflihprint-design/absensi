@@ -594,12 +594,6 @@ const apiService = new SheetsApiService();
             }
         }
 
-
-        /**
-         * ==========================================
-         * 4. REALTIME VERIFICATION & ATTENDANCE FORM
-         * ==========================================
-         */
    function setupAttendanceForm() {
     const codeInput = document.getElementById('employee-code-input');
     const resolvedNameText = document.getElementById('employee-resolved-name');
@@ -718,7 +712,7 @@ async function performAutoCheckIn() {
             "Absen Otomatis"
         );
                
-        updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
+        //updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
         showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
           await refreshDashboardData();
         const notPresent = await getNotPresentEmployees();
