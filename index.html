@@ -699,7 +699,7 @@ async function performAutoCheckIn() {
                
         updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
         showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
-        await kirimNotifikasiAbsen(activeResolvedEmployee.name, "MASUK", checkInTime);
+   
     } catch (error) {
         showToast("Gagal Tersimpan", "Gagal mengirim data ke server.", "error");
     } 
@@ -1016,59 +1016,7 @@ function renderAdminTable() {
     `).join('');
 }
 
-        // Data semua karyawan (bisa diambil dari database/array statis)
-const semuaKaryawan = ["Budi", "Ani", "Citra", "Dedi"]; 
 
-async function kirimNotifikasiAbsen(karyawanAbsen, tipeAbsen, jam) {
-    // 1. Ambil data absen hari ini dari cachedRecords
-    const hariIni = getLocalDateString();
-    const sudahAbsen = cachedRecords
-        .filter(r => r.date === hariIni && r.checkIn !== "--")
-        .map(r => r.employeeName);
-
-    // 2. Tentukan siapa yang belum absen
-    const belumAbsen = semuaKaryawan.filter(nama => !sudahAbsen.includes(nama));
-    
-    // 3. Susun isi pesan
-    let pesan = `<b>Status Absensi</b>\n\n`;
-    pesan += `👤 ${karyawanAbsen} baru saja melakukan absen ${tipeAbsen} pada jam ${jam}.\n\n`;
-    pesan += `⚠️ <b>Daftar Karyawan Belum Absen:</b>\n`;
-    pesan += belumAbsen.length > 0 ? belumAbsen.join('\n') : "Semua karyawan sudah absen.";
-
-    // 4. Kirim ke Backend untuk diteruskan ke Telegram dengan Error Handling
-    try {
-        console.log("🔄 Mengirim notifikasi ke Telegram...");
-        
-        const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: "sendTelegram",
-                message: pesan
-            })
-        });
-
-        // Cek apakah response dari server sukses
-        if (!response.ok) {
-            throw new Error(`Server merespons dengan status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        // Cek status logika di dalam JSON response dari server
-        if (result.status === "success") {
-            console.log("✅ SUKSES: Notifikasi Telegram terkirim.");
-            // Optional: Tambahkan notifikasi UI di sini
-            // showToast("Notifikasi Terkirim", "Data berhasil dikirim ke grup Telegram.", "success");
-        } else {
-            console.error("❌ GAGAL: Server merespons error:", result.message || "Unknown error");
-        }
-
-    } catch (error) {
-        // Menangkap jika ada masalah jaringan (fetch gagal) atau error lain
-        console.error("🚨 CRITICAL ERROR: Gagal menghubungi server atau Telegram API.", error);
-        // Optional: showToast("Error Notifikasi", "Gagal mengirim ke Telegram. Periksa koneksi.", "error");
-    }
-}
  
     </script>
 </body>
