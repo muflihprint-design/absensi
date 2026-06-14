@@ -300,7 +300,7 @@
     <!-- ============================================ -->
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQBzWnieQFbUSPUGcmezl3SFVsr2ath8G1lURYBZbWSQgXN5Obh9Agoophe1PW3L3iiQ/exec"; 
-        
+        let masterEmployeeList = [];
 function getLocalDateString(date = new Date()) {
     // Memastikan waktu lokal benar
     const year = date.getFullYear();
@@ -503,14 +503,18 @@ const apiService = new SheetsApiService();
          * 3. INITIALIZER & EVENT LISTENERS
          * ==========================================
          */
-        document.addEventListener("DOMContentLoaded", () => {
-            initRealtimeClock();
-           setupTabNavigation();
-            setupAttendanceForm();
-            setupAdminDashboard();
-            refreshDashboardData(); 
-        });
-
+        document.addEventListener("DOMContentLoaded", async () => {
+    initRealtimeClock();
+    setupTabNavigation();
+    setupAttendanceForm();
+    setupAdminDashboard();
+    
+    // Tarik data karyawan saat pertama kali buka
+    masterEmployeeList = await apiService.fetchEmployeeList();
+    console.log("Data karyawan dimuat:", masterEmployeeList);
+    
+    refreshDashboardData(); 
+});
         function initRealtimeClock() {
     const timeEl = document.getElementById('live-time');
     const dateEl = document.getElementById('live-date');
@@ -711,6 +715,15 @@ async function performAutoCheckIn() {
                
         updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
         showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
+        const notPresent = await getNotPresentEmployees();
+    
+    let msg = `<b>🔔 Absen Masuk</b>\n${activeResolvedEmployee.name} telah hadir.\n\n`;
+    if (notPresent.length > 0) {
+        msg += `<b>Belum Absen:</b>\n`;
+        notPresent.forEach(emp => { msg += `• ${emp.name}\n`; });
+    }
+    
+    await sendTelegramMessage(msg);
    
     } catch (error) {
         showToast("Gagal Tersimpan", "Gagal mengirim data ke server.", "error");
@@ -1026,6 +1039,49 @@ function renderAdminTable() {
             <td class="py-4 px-6 text-sm text-center font-semibold text-indigo-600">${calculateDuration(r.checkIn, r.checkOut)}</td>
         </tr>
     `).join('');
+}
+
+        // Tambahkan di dalam class SheetsApiService
+async fetchEmployeeList() {
+    try {
+        // Asumsi: Anda memiliki endpoint untuk daftar karyawan
+        const response = await fetch(`${SCRIPT_URL}?action=fetchEmployees`);
+        return await response.json();
+    } catch (err) {
+        console.error("Gagal memuat daftar karyawan:", err);
+        return [];
+    }
+}
+
+        async function getNotPresentEmployees() {
+    const todayStr = getLocalDateString();
+    // Gunakan cachedRecords yang sudah ada dari fetchAllRecords
+    const presentCodes = cachedRecords
+        .filter(r => r.date === todayStr && r.checkIn !== "--")
+        .map(r => r.employeeCode);
+
+    // Bandingkan master list dengan yang sudah absen
+    return masterEmployeeList.filter(emp => !presentCodes.includes(emp.code));
+}
+
+        async function sendTelegramMessage(message) {
+    const BOT_TOKEN = "8863289019:AAGy7A9x9AV3HD7Kh2Xbzv-O3JZSlNERtZo";
+    const CHAT_ID = "-1004473111299";
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+
+    try {
+        await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: message,
+                parse_mode: 'HTML'
+            })
+        });
+    } catch (err) {
+        console.error("Gagal kirim Telegram:", err);
+    }
 }
 
 
