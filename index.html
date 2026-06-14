@@ -614,9 +614,10 @@ const apiService = new SheetsApiService();
         
         // 1. Validasi awal
         if (enteredCode.length === 0) {
-            resetVerificationUI("Masukkan kode karyawan untuk divalidasi oleh sistem cloud.");
-            return;
-        }
+    // Panggil dengan false agar status tidak hilang saat input dikosongkan
+    resetVerificationUI("Masukkan kode karyawan untuk divalidasi oleh sistem cloud.", false);
+    return;
+}
 
         // 2. Validasi panjang karakter
         if (enteredCode.length < 6) {
@@ -645,6 +646,9 @@ const apiService = new SheetsApiService();
                 resolvedNameText.className = "text-xs font-bold text-emerald-600";
                 verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
 
+codeInput.value = '';
+                codeInput.focus();
+                
                 if (record === null) {
                     await performAutoCheckIn();
                 } else {
@@ -746,14 +750,18 @@ async function performAutoCheckIn() {
             resetStatusPanelToVerificationRequired();
         }
 
-        function resetStatusPanelToVerificationRequired() {
-            document.getElementById('status-not-started').classList.remove('hidden');
-            document.getElementById('status-logged-in').classList.add('hidden');
-            document.getElementById('status-completed').classList.add('hidden');
-            
-            document.getElementById('status-placeholder-title').textContent = "Menunggu Verifikasi Kode";
-            document.getElementById('status-placeholder-text').textContent = "Ketik kode karyawan aktif Anda di form kiri untuk membuka menu penulisan absensi.";
-        }
+        function resetStatusPanelToVerificationRequired(isNewCode = false) {
+    // Jika bukan kode baru (misal input dihapus manual oleh user), 
+    // kita tidak ingin mengubah tampilan status yang sedang aktif.
+    if (!isNewCode) return;
+
+    document.getElementById('status-not-started').classList.remove('hidden');
+    document.getElementById('status-logged-in').classList.add('hidden');
+    document.getElementById('status-completed').classList.add('hidden');
+    
+    document.getElementById('status-placeholder-title').textContent = "Menunggu Verifikasi Kode";
+    document.getElementById('status-placeholder-text').textContent = "Ketik kode karyawan aktif Anda di form kiri untuk membuka menu penulisan absensi.";
+}
 
 function showButtonLoading(buttonEl, isLoading) {
     if (!buttonEl) return;
