@@ -644,13 +644,14 @@ codeInput.disabled = true;
                     await performAutoCheckIn();
                } 
                   updateUserStatusDisplay(user.name, user.code, record);
-                codeInput.disabled = false;
+                
             } else {
                 activeResolvedEmployee = null;
                 resolvedNameText.textContent = "Kode karyawan tidak terdaftar.";
                 resolvedNameText.className = "text-xs font-semibold text-rose-500";
                 verificationBadge.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
                 checkOutBtn.disabled = true;
+                codeInput.disabled = false;
                 resetStatusPanelToVerificationRequired();
             }
         }, 600);
