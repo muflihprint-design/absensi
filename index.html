@@ -627,7 +627,7 @@ const apiService = new SheetsApiService();
             checkOutBtn.disabled = true;
             return; 
         }
-
+codeInput.disabled = true;
         // 3. Jika >= 6 karakter, tampilkan status loading
         resolvedNameText.textContent = "Menghubungi cloud...";
         resolvedNameText.className = "text-xs font-semibold text-indigo-500 animate-pulse";
@@ -637,7 +637,8 @@ const apiService = new SheetsApiService();
         // 4. Debounce proses verifikasi
         debounceTimer = setTimeout(async () => {
             const response = await apiService.verifyEmployee(enteredCode);
-            
+            codeInput.disabled = false;
+            codeInput.focus(); // Fokus kembali ke input
             if (response && response.success && response.exists) {
                 const { user, record } = response;
                 activeResolvedEmployee = { code: user.code, name: user.name };
