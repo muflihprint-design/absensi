@@ -698,7 +698,7 @@ async function performAutoCheckIn() {
         );
 
 
-        await kirimNotifikasiAbsen(employeeName, "MASUK", checkInTime);
+        await kirimNotifikasiAbsen(activeResolvedEmployee.name, "MASUK", checkInTime);
         
         updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
         showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
