@@ -496,11 +496,7 @@ if (data.success && data.exists) {
 
 // Inisialisasi service setelah kelas didefinisikan
 const apiService = new SheetsApiService();
-        /**
-         * ==========================================
-         * 2. VARIABEL GLOBAL & STATE MANAJEMEN
-         * ==========================================
-         */
+      
         let currentTab = "user";
         let cachedRecords = []; 
         let activeResolvedEmployee = null; // Menyimpan data karyawan terverifikasi saat ini
@@ -511,12 +507,6 @@ const apiService = new SheetsApiService();
         const tabUserContent = document.getElementById('tab-user-content');
         const tabAdminContent = document.getElementById('tab-admin-content');
 
-
-        /**
-         * ==========================================
-         * 3. INITIALIZER & EVENT LISTENERS
-         * ==========================================
-         */
         document.addEventListener("DOMContentLoaded", async () => {
     initRealtimeClock();
     setupTabNavigation();
@@ -729,6 +719,7 @@ async function performAutoCheckIn() {
                
         updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
         showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
+          await refreshDashboardData();
         const notPresent = await getNotPresentEmployees();
     
     let msg = `<b>🔔 Absen Masuk</b>\n${activeResolvedEmployee.name} telah hadir.\n\n`;
@@ -738,7 +729,7 @@ async function performAutoCheckIn() {
     }
     
     await sendTelegramMessage(msg);
-        await refreshDashboardData();
+      
    
     } catch (error) {
         showToast("Gagal Tersimpan", "Gagal mengirim data ke server.", "error");
