@@ -646,18 +646,8 @@ codeInput.disabled = true;
                 resolvedNameText.textContent = `Karyawan Teridentifikasi: ${user.name}`;
                 resolvedNameText.className = "text-xs font-bold text-emerald-600";
                 verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
-
-// --- LOGIKA BARU: Cek status untuk menentukan apakah input harus dikosongkan ---
-    const isCheckedInOnly = record && record.checkIn !== "--" && (record.checkOut === "--" || !record.checkOut);
-    
-    if (isCheckedInOnly) {
-        // Jika sudah masuk tapi belum pulang, JANGAN HAPUS KODE agar user bisa lanjut absen pulang
-        console.log("Status: Sudah masuk, input kode tidak dikosongkan.");
-    } else {
-        // Jika belum absen sama sekali (record null) atau sudah selesai (ada checkOut), hapus kode
         codeInput.value = ''; 
-    }
-                codeInput.focus();
+                  codeInput.focus();
                 
                 if (record === null) {
                     await performAutoCheckIn();
