@@ -666,12 +666,9 @@ const apiService = new SheetsApiService();
         
         showToast("Terjadi Kendala", error.message || "Gagal melakukan absensi keluar. Silakan coba lagi.", "error");
         
-    } finally {
-        // Matikan loading spinner
-        const isCheckedOut = activeResolvedEmployee && /* cek status record */; 
-    if (!isCheckedOut) {
-        showButtonLoading(checkOutBtn, false);
-    }
+   } finally {
+      showButtonLoading(checkOutBtn, false);
+}
     }
 });
         }
