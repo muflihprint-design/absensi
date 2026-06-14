@@ -738,6 +738,7 @@ async function performAutoCheckIn() {
     }
     
     await sendTelegramMessage(msg);
+        await refreshDashboardData();
    
     } catch (error) {
         showToast("Gagal Tersimpan", "Gagal mengirim data ke server.", "error");
