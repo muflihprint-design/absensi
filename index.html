@@ -1037,14 +1037,39 @@ async function kirimNotifikasiAbsen(karyawanAbsen, tipeAbsen, jam) {
     pesan += `⚠️ <b>Daftar Karyawan Belum Absen:</b>\n`;
     pesan += belumAbsen.length > 0 ? belumAbsen.join('\n') : "Semua karyawan sudah absen.";
 
-    // 4. Kirim ke Backend untuk diteruskan ke Telegram
-    await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify({
-            action: "sendTelegram",
-            message: pesan
-        })
-    });
+    // 4. Kirim ke Backend untuk diteruskan ke Telegram dengan Error Handling
+    try {
+        console.log("🔄 Mengirim notifikasi ke Telegram...");
+        
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: "sendTelegram",
+                message: pesan
+            })
+        });
+
+        // Cek apakah response dari server sukses
+        if (!response.ok) {
+            throw new Error(`Server merespons dengan status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        // Cek status logika di dalam JSON response dari server
+        if (result.status === "success") {
+            console.log("✅ SUKSES: Notifikasi Telegram terkirim.");
+            // Optional: Tambahkan notifikasi UI di sini
+            // showToast("Notifikasi Terkirim", "Data berhasil dikirim ke grup Telegram.", "success");
+        } else {
+            console.error("❌ GAGAL: Server merespons error:", result.message || "Unknown error");
+        }
+
+    } catch (error) {
+        // Menangkap jika ada masalah jaringan (fetch gagal) atau error lain
+        console.error("🚨 CRITICAL ERROR: Gagal menghubungi server atau Telegram API.", error);
+        // Optional: showToast("Error Notifikasi", "Gagal mengirim ke Telegram. Periksa koneksi.", "error");
+    }
 }
  
     </script>
