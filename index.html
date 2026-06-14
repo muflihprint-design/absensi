@@ -576,11 +576,10 @@ const apiService = new SheetsApiService();
          * 4. REALTIME VERIFICATION & ATTENDANCE FORM
          * ==========================================
          */
-        function setupAttendanceForm() {
+   function setupAttendanceForm() {
     const codeInput = document.getElementById('employee-code-input');
     const resolvedNameText = document.getElementById('employee-resolved-name');
     const verificationBadge = document.getElementById('verification-badge');
-    
     const checkOutBtn = document.getElementById('btn-check-out');
     const noteInput = document.getElementById('attendance-notes');
 
@@ -595,84 +594,66 @@ const apiService = new SheetsApiService();
             return;
         }
 
-        // Tampilan Loading
         resolvedNameText.textContent = "Menghubungi cloud...";
         resolvedNameText.className = "text-xs font-semibold text-indigo-500 animate-pulse";
         verificationBadge.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-indigo-500"></i>';
         verificationBadge.classList.remove('hidden');
 
         debounceTimer = setTimeout(async () => {
-          const response = await apiService.verifyEmployee(enteredCode);
-    
-    if (response && response.success && response.exists) {
-        const { user, record } = response;
-        activeResolvedEmployee = { code: user.code, name: user.name };
+            const response = await apiService.verifyEmployee(enteredCode);
+            if (response && response.success && response.exists) {
+                const { user, record } = response;
+                activeResolvedEmployee = { code: user.code, name: user.name };
 
-        resolvedNameText.textContent = `Karyawan Teridentifikasi: ${user.name}`;
-        resolvedNameText.className = "text-xs font-bold text-emerald-600";
-        verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+                resolvedNameText.textContent = `Karyawan Teridentifikasi: ${user.name}`;
+                resolvedNameText.className = "text-xs font-bold text-emerald-600";
+                verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
 
-        // LOGIKA OTOMATIS: Jika record masih null (belum absen), langsung jalankan check-in
-        if (record === null) {
-            console.log("Mendeteksi belum absen, melakukan auto check-in...");
-            await performAutoCheckIn();
-        } else {
-            // Jika sudah ada record, tampilkan status biasa
-            updateUserStatusDisplay(user.name, user.code, record);
-        }
-    } else {
+                if (record === null) {
+                    await performAutoCheckIn();
+                } else {
+                    updateUserStatusDisplay(user.name, user.code, record);
+                }
+            } else {
                 activeResolvedEmployee = null;
                 resolvedNameText.textContent = "Kode karyawan tidak terdaftar.";
                 resolvedNameText.className = "text-xs font-semibold text-rose-500";
                 verificationBadge.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
-                
-                // Reset tombol dan status panel
                 checkOutBtn.disabled = true;
                 resetStatusPanelToVerificationRequired();
             }
         }, 600);
     });
-         
 
-            // LOGIKA KLIK TOMBOL ABSEN KELUAR
-            checkOutBtn.addEventListener('click', async () => {
-    if (!activeResolvedEmployee) {
-        showToast("Validasi Gagal", "Masukkan kode karyawan yang valid!", "warning");
-        return;
-    }
-
-    // 1. DISABLE SEGERA SAAT DIKLIK
-    checkOutBtn.disabled = true;
-    checkOutBtn.textContent = "Memproses..."; // Opsional: Beri feedback visual
-    
-    // Tampilkan loading di dalam tombol (jika fungsi ini ada di project Anda)
-    showButtonLoading(checkOutBtn, true);
-
-    try {
-        const now = new Date();
-        const checkOutTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-        const todayStr = getLocalDateString(now);
-
-        const result = await apiService.updateRecordCheckOut(activeResolvedEmployee.code, todayStr, checkOutTime);
-        
-        // Update UI jika berhasil
-        updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
-        showToast("Sukses Pulang", `Terima kasih, ${activeResolvedEmployee.name}. Absen keluar Anda tersimpan.`, "success");
-        
-    } catch (error) {
-        // 2. ENABLE KEMBALI JIKA TERJADI ERROR
-        checkOutBtn.disabled = false;
-        checkOutBtn.textContent = "Keluar"; // Kembalikan teks asli
-        
-        showToast("Terjadi Kendala", error.message || "Gagal melakukan absensi keluar. Silakan coba lagi.", "error");
-        
-   } finally {
-      showButtonLoading(checkOutBtn, false);
-}
-    }
-});
+    // LOGIKA KLIK TOMBOL ABSEN KELUAR
+    checkOutBtn.addEventListener('click', async () => {
+        if (!activeResolvedEmployee) {
+            showToast("Validasi Gagal", "Masukkan kode karyawan yang valid!", "warning");
+            return;
         }
 
+        checkOutBtn.disabled = true;
+        checkOutBtn.textContent = "Memproses...";
+        showButtonLoading(checkOutBtn, true);
+
+        try {
+            const now = new Date();
+            const checkOutTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            const todayStr = getLocalDateString(now);
+
+            const result = await apiService.updateRecordCheckOut(activeResolvedEmployee.code, todayStr, checkOutTime);
+            updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
+            showToast("Sukses Pulang", `Terima kasih, ${activeResolvedEmployee.name}. Absen keluar Anda tersimpan.`, "success");
+        } catch (error) {
+            checkOutBtn.disabled = false;
+            checkOutBtn.textContent = "Keluar";
+            showToast("Terjadi Kendala", error.message || "Gagal melakukan absensi keluar. Silakan coba lagi.", "error");
+        } finally {
+            showButtonLoading(checkOutBtn, false);
+        }
+    });
+} // <--- Hanya ada SATU penutup di sini
+        
         // Fungsi utilitas helper demo untuk mengisi kode secara instan
         window.fillDemoCode = function(code) {
             const codeInput = document.getElementById('employee-code-input');
