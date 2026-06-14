@@ -646,9 +646,7 @@ codeInput.disabled = true;
                 resolvedNameText.textContent = `Karyawan Teridentifikasi: ${user.name}`;
                 resolvedNameText.className = "text-xs font-bold text-emerald-600";
                 verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
-        codeInput.value = ''; 
-                  codeInput.focus();
-                
+                               
                 if (record === null) {
                     await performAutoCheckIn();
                 } else {
@@ -786,40 +784,42 @@ function showButtonLoading(buttonEl, isLoading) {
     }
 }
         
-        function updateUserStatusDisplay(employeeName, employeeCode, record) {
+ function updateUserStatusDisplay(employeeName, employeeCode, record) {
     const notStartedCard = document.getElementById('status-not-started');
     const loggedInCard = document.getElementById('status-logged-in');
     const completedCard = document.getElementById('status-completed');
     const checkOutBtn = document.getElementById('btn-check-out');
+    const codeInput = document.getElementById('employee-code-input'); // Menambah referensi input
 
-    // 1. KUNCI PENGAMAN (Guard Clause)
-    // Jangan lakukan perubahan apapun jika tombol tidak ditemukan
+    // 1. KUNCI PENGAMAN
     if (!checkOutBtn) return;
 
     // 2. Tentukan status dari data record
     const isCheckedOut = record && record.checkOut && record.checkOut !== "--" && record.checkOut !== "";
 
-    // 3. LOGIKA STATE YANG EKSKLUSIF (Menggunakan if-else yang ketat)
+    // 3. LOGIKA STATE
     if (!record) {
-        // BELUM ABSEN
+        // BELUM ABSEN: Kosongkan input dan kunci tombol
+        codeInput.value = ''; 
         notStartedCard.classList.remove('hidden');
         loggedInCard.classList.add('hidden');
         completedCard.classList.add('hidden');
         
-        checkOutBtn.disabled = true; // Tetap dikunci
+        checkOutBtn.disabled = true;
         checkOutBtn.textContent = "Keluar";
     } 
     else if (record.checkIn && !isCheckedOut) {
-        // SUDAH MASUK, BELUM PULANG
+        // SUDAH MASUK, BELUM PULANG: Biarkan input berisi kode, Enable tombol Keluar
         notStartedCard.classList.add('hidden');
         loggedInCard.classList.remove('hidden');
         completedCard.classList.add('hidden');
         
-        checkOutBtn.disabled = false; // HANYA DI SINI TOMBOL DI-ENABLE
+        checkOutBtn.disabled = false;
         checkOutBtn.textContent = "Keluar";
     } 
     else if (record.checkIn && isCheckedOut) {
-        // SUDAH SELESAI
+        // SUDAH SELESAI: Kosongkan input dan kunci tombol
+        codeInput.value = '';
         notStartedCard.classList.add('hidden');
         loggedInCard.classList.add('hidden');
         completedCard.classList.remove('hidden');
@@ -827,10 +827,13 @@ function showButtonLoading(buttonEl, isLoading) {
         document.getElementById('summary-check-in').textContent = record.checkIn;
         document.getElementById('summary-check-out').textContent = record.checkOut;
 
-        // PENGUNCIAN TEGAS
         checkOutBtn.disabled = true; 
         checkOutBtn.textContent = "Selesai Hari Ini";
     }
+
+     setTimeout(() => {
+        codeInput.focus();
+    }, 100);
 }
 
         function setupAdminDashboard() {
