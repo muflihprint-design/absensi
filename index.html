@@ -330,6 +330,17 @@ class SheetsApiService {
         }
     }
 
+    async fetchEmployeeList() {
+    try {
+        // Asumsi: Anda memiliki endpoint untuk daftar karyawan
+        const response = await fetch(`${SCRIPT_URL}?action=fetchEmployees`);
+        return await response.json();
+    } catch (err) {
+        console.error("Gagal memuat daftar karyawan:", err);
+        return [];
+    }
+}
+
     // 2. VERIFY EMPLOYEE
 async verifyEmployee(code) {
     // 1. Pastikan variabel tanggal konsisten
@@ -478,6 +489,9 @@ if (data.success && data.exists) {
         localStorage.setItem("cloud_attendance_records_nocode", JSON.stringify(records));
         return records[idx];
     }
+
+
+    
 }
 
 // Inisialisasi service setelah kelas didefinisikan
@@ -1041,17 +1055,7 @@ function renderAdminTable() {
     `).join('');
 }
 
-        // Tambahkan di dalam class SheetsApiService
-async fetchEmployeeList() {
-    try {
-        // Asumsi: Anda memiliki endpoint untuk daftar karyawan
-        const response = await fetch(`${SCRIPT_URL}?action=fetchEmployees`);
-        return await response.json();
-    } catch (err) {
-        console.error("Gagal memuat daftar karyawan:", err);
-        return [];
-    }
-}
+        
 
         async function getNotPresentEmployees() {
     const todayStr = getLocalDateString();
