@@ -668,7 +668,10 @@ const apiService = new SheetsApiService();
         
     } finally {
         // Matikan loading spinner
+        const isCheckedOut = activeResolvedEmployee && /* cek status record */; 
+    if (!isCheckedOut) {
         showButtonLoading(checkOutBtn, false);
+    }
     }
 });
         }
