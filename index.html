@@ -641,11 +641,26 @@ codeInput.disabled = true;
                 verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
                                
                 if (record === null) {
-                    await performAutoCheckIn();
-               } 
-                  updateUserStatusDisplay(user.name, user.code, record);
-                
-            } else {
+    const todayDate = getLocalDateString();
+    
+    // 1. CEK INGATAN LOKAL: Apakah dia baru saja absen masuk di perangkat ini hari ini?
+    if (sessionStorage.getItem(`sudah_masuk_${user.code}`) === todayDate) {
+        showToast("Informasi", `Sistem mencatat ${user.name} baru saja melakukan absen masuk.`, "info");
+    } else {
+        // 2. Jika belum, lakukan proses absen ke Google Sheets
+        await performAutoCheckIn();
+        
+        // 3. Simpan di ingatan browser bahwa karyawan ini sudah absen hari ini
+        sessionStorage.setItem(`sudah_masuk_${user.code}`, todayDate);
+    }
+    
+    // 4. Sengaja dikirim parameter "null" agar tampilan form langsung terhapus (Kiosk Mode)
+    updateUserStatusDisplay(user.name, user.code, null);
+    
+} else {
+    // 5. Jika record dari server TIDAK null (artinya karyawan sudah absen masuk sebelumnya dan sekarang men-scan untuk absen pulang)
+    updateUserStatusDisplay(user.name, user.code, record);
+} else {
                 activeResolvedEmployee = null;
                 resolvedNameText.textContent = "Kode karyawan tidak terdaftar.";
                 resolvedNameText.className = "text-xs font-semibold text-rose-500";
@@ -717,8 +732,7 @@ async function performAutoCheckIn() {
             "Absen Otomatis"
         );
                
-        //updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
-        showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
+              showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
           await refreshDashboardData();
         const notPresent = await getNotPresentEmployees();
     
