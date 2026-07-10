@@ -149,6 +149,10 @@
     </div>
 </div>
 
+<div id="daily-attendance-summary" class="mt-6 pt-5 border-t border-slate-100 hidden">
+                <!-- Konten akan di-generate oleh JavaScript -->
+            </div>
+           
                 <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase">
                     <span class="flex items-center gap-1"><i class="fa-solid fa-circle text-[8px] text-emerald-500"></i> Server Aktif</span>
                     <span>Cloud Sync</span>
@@ -849,6 +853,67 @@ function showButtonLoading(buttonEl, isLoading) {
     }, 100);
 }
 
+        async function updateLiveAttendanceSummary() {
+    const todayStr = getLocalDateString();
+    
+    // 1. Ambil data absen hari ini, filter yang sudah check-in, dan urutkan dari yang paling baru
+    const presentRecords = cachedRecords
+        .filter(r => r.date === todayStr && r.checkIn !== "--")
+        .sort((a, b) => b.checkIn.localeCompare(a.checkIn)); // Sortir waktu descending
+    
+    // Ambil 3 karyawan terakhir yang baru saja absen
+    const recentCheckIns = presentRecords.slice(0, 3);
+
+    // 2. Ambil data karyawan yang belum absen (menggunakan fungsi bawaan Anda)
+    const notPresentEmployees = await getNotPresentEmployees();
+
+    // 3. Render ke UI
+    const summaryContainer = document.getElementById('daily-attendance-summary');
+    if (!summaryContainer) return;
+
+    let html = '';
+
+    // -- Bagian Karyawan Baru Saja Absen --
+    html += `<div class="mb-4">
+                <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Baru Saja Hadir
+                </h4>`;
+    if (recentCheckIns.length > 0) {
+        html += `<ul class="space-y-2">`;
+        recentCheckIns.forEach(r => {
+            html += `<li class="flex justify-between items-center bg-emerald-50/70 border border-emerald-100 px-3 py-2 rounded-lg text-sm text-emerald-800">
+                        <span class="font-semibold">${r.employeeName}</span>
+                        <span class="text-xs font-mono bg-emerald-100 px-2 py-1 rounded-md">${r.checkIn}</span>
+                     </li>`;
+        });
+        html += `</ul>`;
+    } else {
+        html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada presensi masuk hari ini.</p>`;
+    }
+    html += `</div>`;
+
+    // -- Bagian Karyawan Belum Absen --
+    html += `<div>
+                <h4 class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-clock"></i> Belum Hadir (${notPresentEmployees.length})
+                </h4>`;
+    if (notPresentEmployees.length > 0) {
+        html += `<div class="flex flex-wrap gap-2">`;
+        notPresentEmployees.forEach(emp => {
+            html += `<span class="inline-block bg-white text-slate-600 text-xs px-2.5 py-1.5 rounded-md font-medium border border-slate-200 shadow-sm">${emp.name}</span>`;
+        });
+        html += `</div>`;
+    } else {
+        html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Semua karyawan telah hadir.</p>`;
+    }
+    html += `</div>`;
+
+    // Pasang ke HTML dan tampilkan
+    summaryContainer.innerHTML = html;
+    summaryContainer.classList.remove('hidden');
+}
+        
+
         function setupAdminDashboard() {
             const filterDateInput = document.getElementById('filter-date');
             const filterNameInput = document.getElementById('filter-name');
@@ -873,16 +938,33 @@ function showButtonLoading(buttonEl, isLoading) {
             });
         }
 
-        async function refreshDashboardData() {
-            try {
-                cachedRecords = await apiService.fetchAllRecords();
-                renderAdminTable();
-                calculateAdminStats();
-            } catch (error) {
-                showToast("Sinkronisasi Gagal", "Gagal memperbarui data panel admin dari cloud.", "error");
-            }
+      async function refreshDashboardData() {
+    try {
+        // 1. Ambil data mentah dari server
+        const rawData = await apiService.fetchAllRecords();
+        
+        // 2. Format tanggal dan waktu (Sangat Penting agar tidak error)
+        cachedRecords = rawData.map(r => ({ 
+            ...r,
+            date: formatDate(r.date),
+            checkIn: cleanTime(r.checkIn),
+            checkOut: cleanTime(r.checkOut)
+        }));
+        
+        // 3. Update tampilan tabel dan statistik Admin
+        renderAdminTable();
+        calculateAdminStats();
+        
+        // 4. Update ringkasan realtime di halaman User
+        if (typeof updateLiveAttendanceSummary === "function") {
+            await updateLiveAttendanceSummary();
         }
-
+        
+    } catch (err) { 
+        console.error(err); 
+        showToast("Sinkronisasi Gagal", "Gagal memperbarui data dari cloud.", "error");
+    }
+}
    
    
         function exportDataToCSV() {
@@ -1017,24 +1099,7 @@ function calculateDuration(checkIn, checkOut) {
             return `${year}-${month}-${day}`;
         }
         
-async function refreshDashboardData() {
-    try {
-        const rawData = await apiService.fetchAllRecords();
-        // Menggunakan logika pemetaan data yang Anda berikan
-        cachedRecords = rawData.map(r => ({ 
-            ...r,
-            date: formatDate(r.date),
-            checkIn: cleanTime(r.checkIn),
-            checkOut: cleanTime(r.checkOut)
-        }));
-        
-        renderAdminTable();
-        calculateAdminStats();
-    } catch (err) { 
-        console.error(err); 
-        showToast("Error", "Gagal memperbarui data admin.", "error");
-    }
-}
+
 
 function calculateAdminStats() {
     const todayStr = getLocalDateString();
