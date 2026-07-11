@@ -290,7 +290,7 @@
 
         // Handler saat mengetik kode karyawan
         let typingTimer;
-        document.getElementById('employee-code-input').addEventListener('input', (e) => {
+      document.getElementById('employee-code-input').addEventListener('input', (e) => {
             clearTimeout(typingTimer);
             const code = e.target.value.toUpperCase();
             const btnCheckOut = document.getElementById('btn-check-out');
@@ -325,6 +325,9 @@
                         const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
                         await apiService.createRecord(res.user.code, res.user.name, time);
                         
+                        // --- FITUR SUARA: Absen Masuk ---
+                        sebutkanNama(`Selamat bekerja, ${res.user.name}`);
+                        
                         showToast("Berhasil Masuk!", `Selamat bekerja, ${res.user.name}. Waktu: ${time}`, "success");
                         e.target.value = ""; // Kosongkan input
                         setTimeout(() => resolveText.textContent = "Silakan masukkan 6 digit kode Anda...", 2000);
@@ -333,14 +336,25 @@
                         // Sudah Absen Masuk -> Siap untuk Absen Keluar
                         btnCheckOut.disabled = false;
                         btnCheckOut.dataset.code = code; // Simpan kode ke tombol
+                        
+                        // --- FITUR SUARA: Simpan nama untuk absen keluar nanti ---
+                        btnCheckOut.dataset.name = res.user.name;
+                        
                         showToast("Informasi", "Anda sudah absen masuk. Silakan klik tombol 'Absen Keluar' jika ingin pulang.", "info");
                     } else {
                         // Sudah absen lengkap
+                        // --- FITUR SUARA: Peringatan sudah absen ---
+                        sebutkanNama("Anda sudah menyelesaikan absensi hari ini.");
+                        
                         showToast("Perhatian", "Anda sudah menyelesaikan absensi hari ini (Masuk & Keluar).", "error");
                         e.target.value = ""; // Kosongkan input
                     }
                 } else {
                     resolveText.innerHTML = `<span class="text-rose-500 font-bold"><i class="fa-solid fa-circle-xmark"></i> Kode Karyawan Tidak Valid</span>`;
+                    
+                    // --- FITUR SUARA: Peringatan kode salah ---
+                    sebutkanNama("Kode karyawan tidak valid.");
+                    
                     showToast("Gagal", "Kode tidak terdaftar di sistem.", "error");
                 }
             }, 500); // Jeda setengah detik setelah selesai ngetik 6 digit
@@ -349,6 +363,10 @@
         // Handler klik tombol Absen Keluar
         document.getElementById('btn-check-out').onclick = async function() {
             const code = this.dataset.code;
+            
+            // --- FITUR SUARA: Ambil nama karyawan dari tombol ---
+            const name = this.dataset.name; 
+            
             if (!code) return;
             
             const btn = this;
@@ -358,6 +376,9 @@
 
             const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
             await apiService.checkOut(code, time);
+            
+            // --- FITUR SUARA: Absen Keluar ---
+            sebutkanNama(`Terima kasih, ${name}, hati-hati di jalan.`);
             
             showToast("Berhasil Keluar!", `Terima kasih atas kerja keras Anda hari ini. Waktu: ${time}`, "success");
             
@@ -374,6 +395,24 @@
             initClock(); // Jalankan jam 
             refreshDashboardData(); // Sinkronisasi data awal
         });
+
+// FUNGSI BARU: Mengubah teks menjadi suara
+function sebutkanNama(teks) {
+    if ('speechSynthesis' in window) {
+        // Hentikan suara sebelumnya jika masih ada yang berbicara
+        window.speechSynthesis.cancel(); 
+        
+        const ucapan = new SpeechSynthesisUtterance(teks);
+        ucapan.lang = 'id-ID'; // Menggunakan aksen dan bahasa Indonesia
+        ucapan.rate = 0.9;     // Kecepatan suara (0.1 sampai 10, default 1)
+        ucapan.pitch = 1.0;    // Nada suara (0 sampai 2, default 1)
+        
+        window.speechSynthesis.speak(ucapan);
+    } else {
+        console.log("Browser Anda tidak mendukung fitur Text-to-Speech.");
+    }
+}
+
     </script>
 </body>
 </html>
