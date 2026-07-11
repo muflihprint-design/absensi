@@ -916,29 +916,44 @@ function showButtonLoading(buttonEl, isLoading) {
     const recordsToUse = typeof cachedRecords !== 'undefined' ? cachedRecords : [];
     const presentRecords = recordsToUse.filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--");
 
-   let html = `<div class="flex flex-col gap-6">`;
+    let html = `<div class="flex flex-col gap-6">`;
     
     // ==========================================
     // ATAS: KARYAWAN SUDAH HADIR
     // ==========================================
-    html += `<div>
+    html += `<div>`;
+
+    // Tambahkan kondisi loading di sini
+    if (isLoadingSheet) {
+        html += `
+        <h4 class="text-xs font-bold text-emerald-600/70 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-spinner fa-spin"></i> Memuat Data Presensi...
+        </h4>
+        <div class="space-y-2 animate-pulse mt-2">
+            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+        </div>`;
+    } else {
+        html += `
         <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <i class="fa-solid fa-user-check"></i> Sudah Hadir (${presentRecords.length})
         </h4>`;
-        
-    if (presentRecords.length > 0) {
-        html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
-        presentRecords.forEach(r => {
-            html += `
-            <li class="flex justify-between items-center bg-emerald-50/50 border border-emerald-100 px-3 py-2 rounded-lg text-sm text-emerald-800">
-                <span class="font-semibold">${r.employeeName || 'Karyawan'}</span>
-                <span class="text-xs font-mono bg-emerald-100 px-2 py-1 rounded-md">${r.checkIn}</span>
-            </li>`;
-        });
-        html += `</ul>`;
-    } else {
-        html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada presensi masuk hari ini.</p>`;
+            
+        if (presentRecords.length > 0) {
+            html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
+            presentRecords.forEach(r => {
+                html += `
+                <li class="flex justify-between items-center bg-emerald-50/50 border border-emerald-100 px-3 py-2 rounded-lg text-sm text-emerald-800">
+                    <span class="font-semibold">${r.employeeName || 'Karyawan'}</span>
+                    <span class="text-xs font-mono bg-emerald-100 px-2 py-1 rounded-md">${r.checkIn}</span>
+                </li>`;
+            });
+            html += `</ul>`;
+        } else {
+            html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada presensi masuk hari ini.</p>`;
+        }
     }
+    
     html += `</div>`;
 
     // Tambahkan garis pemisah opsional jika diinginkan
@@ -950,7 +965,7 @@ function showButtonLoading(buttonEl, isLoading) {
     html += `<div>`;
     
     if (isLoadingSheet) {
-        // Tampilkan Efek Loading
+        // Tampilkan Efek Loading (Kode Asli)
         html += `
         <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <i class="fa-solid fa-spinner fa-spin text-indigo-500"></i> Memuat Data Master...
