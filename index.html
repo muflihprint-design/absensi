@@ -70,7 +70,7 @@
         const SUPABASE_URL = 'https://tigszfvmbpvznotykryx.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpZ3N6ZnZtYnB2em5vdHlrcnl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MzQwMjcsImV4cCI6MjA5OTMxMDAyN30.O0-y9FI_sikkPVig2XNDJ_zlTnfJZv-hRirPurs8yQc';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+        
         // State Data
         let masterEmployeeList = [];
         let cachedRecords = [];
@@ -322,11 +322,12 @@
                     
                     if (!res.record) {
                         // Belum Absen Masuk -> Langsung Absen Masuk Otomatis
-                        const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
-                        await apiService.createRecord(res.user.code, res.user.name, time);
-                        
-                        // --- FITUR SUARA: Absen Masuk ---
-                        sebutkanNama(`Selamat bekerja, ${res.user.name}`);
+const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+await apiService.createRecord(res.user.code, res.user.name, time);
+
+// --- FITUR SUARA: Absen Masuk ---
+// Ubah pemanggilan suara menggunakan res.user.username
+sebutkanNama(`Selamat bekerja, ${res.user.username}`);
                         
                         showToast("Berhasil Masuk!", `Selamat bekerja, ${res.user.name}. Waktu: ${time}`, "success");
                         e.target.value = ""; // Kosongkan input
@@ -334,11 +335,11 @@
                         refreshDashboardData(); // Refresh UI
                     } else if (!res.record.checkOut || res.record.checkOut === '--') {
                         // Sudah Absen Masuk -> Siap untuk Absen Keluar
-                        btnCheckOut.disabled = false;
-                        btnCheckOut.dataset.code = code; // Simpan kode ke tombol
-                        
-                        // --- FITUR SUARA: Simpan nama untuk absen keluar nanti ---
-                        btnCheckOut.dataset.name = res.user.name;
+btnCheckOut.disabled = false;
+btnCheckOut.dataset.code = code; // Simpan kode ke tombol
+
+// --- FITUR SUARA: Simpan username untuk absen keluar nanti ---
+btnCheckOut.dataset.username = res.user.username;
                         
                         showToast("Informasi", "Anda sudah absen masuk. Silakan klik tombol 'Absen Keluar' jika ingin pulang.", "info");
                     } else {
@@ -362,10 +363,10 @@
 
         // Handler klik tombol Absen Keluar
         document.getElementById('btn-check-out').onclick = async function() {
-            const code = this.dataset.code;
-            
-            // --- FITUR SUARA: Ambil nama karyawan dari tombol ---
-            const name = this.dataset.name; 
+         const code = this.dataset.code;
+    
+    // --- FITUR SUARA: Ambil username dari tombol ---
+    const username = this.dataset.username;
             
             if (!code) return;
             
@@ -378,7 +379,7 @@
             await apiService.checkOut(code, time);
             
             // --- FITUR SUARA: Absen Keluar ---
-            sebutkanNama(`Terima kasih, ${name}, hati-hati di jalan.`);
+            sebutkanNama(`Terima kasih, ${username}, hati-hati di jalan.`);
             
             showToast("Berhasil Keluar!", `Terima kasih atas kerja keras Anda hari ini. Waktu: ${time}`, "success");
             
