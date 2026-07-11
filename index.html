@@ -126,31 +126,9 @@
                     <i class="fa-solid fa-chart-line text-indigo-500"></i> Status Hari Ini
                 </h2>
                 
-            <div id="status-container" class="min-h-[150px] flex flex-col justify-center">
-    <div id="status-not-started" class="text-center text-slate-400">
-        <i class="fa-solid fa-fingerprint text-3xl mb-2 opacity-50"></i>
-        <h3 id="status-placeholder-title" class="text-sm font-bold text-slate-700">Menunggu Verifikasi Kode</h3>
-        <p id="status-placeholder-text" class="text-xs">Ketik kode karyawan aktif Anda di form kiri untuk membuka menu penulisan absensi.</p>
-    </div>
+         
 
-    <div id="status-logged-in" class="hidden text-center">
-        <i class="fa-solid fa-circle-check text-3xl text-emerald-500 mb-2"></i>
-        <p id="active-user-display" class="font-bold text-slate-800"></p>
-        <p id="active-code-display" class="text-xs text-slate-500"></p>
-        <p id="check-in-info" class="text-sm mt-2"></p>
-    </div>
-
-    <div id="status-completed" class="hidden text-center">
-        <i class="fa-solid fa-house-chimney-check text-3xl text-indigo-500 mb-2"></i>
-        <p id="check-out-info" class="text-sm"></p>
-        <div class="mt-2 text-xs text-slate-500">
-            Masuk: <span id="summary-check-in"></span> | Keluar: <span id="summary-check-out"></span>
-        </div>
-    </div>
-</div>
-
-<div id="daily-attendance-summary" class="mt-6 pt-5 border-t border-slate-100 hidden">
-                <!-- Konten akan di-generate oleh JavaScript -->
+<div id="daily-attendance-summary" class="hidden">
             </div>
            
                 <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase">
@@ -816,17 +794,7 @@ async function performAutoCheckIn() {
         }
 
         function resetStatusPanelToVerificationRequired(isNewCode = false) {
-    // Jika bukan kode baru (misal input dihapus manual oleh user), 
-    // kita tidak ingin mengubah tampilan status yang sedang aktif.
-    if (!isNewCode) return;
-
-    document.getElementById('status-not-started').classList.remove('hidden');
-    document.getElementById('status-logged-in').classList.add('hidden');
-    document.getElementById('status-completed').classList.add('hidden');
-    
-    document.getElementById('status-placeholder-title').textContent = "Menunggu Verifikasi Kode";
-    document.getElementById('status-placeholder-text').textContent = "Ketik kode karyawan aktif Anda di form kiri untuk membuka menu penulisan absensi.";
-}
+   }
 
 function showButtonLoading(buttonEl, isLoading) {
     if (!buttonEl) return;
@@ -852,55 +820,30 @@ function showButtonLoading(buttonEl, isLoading) {
 }
         
  function updateUserStatusDisplay(employeeName, employeeCode, record) {
-    const notStartedCard = document.getElementById('status-not-started');
-    const loggedInCard = document.getElementById('status-logged-in');
-    const completedCard = document.getElementById('status-completed');
     const checkOutBtn = document.getElementById('btn-check-out');
-    const codeInput = document.getElementById('employee-code-input'); // Menambah referensi input
+    const codeInput = document.getElementById('employee-code-input');
 
-    // 1. KUNCI PENGAMAN
     if (!checkOutBtn) return;
 
-    // 2. Tentukan status dari data record
     const isCheckedOut = record && record.checkOut && record.checkOut !== "--" && record.checkOut !== "";
 
-    // 3. LOGIKA STATE
     if (!record) {
         // BELUM ABSEN: Kosongkan input dan kunci tombol
         codeInput.value = ''; 
-        notStartedCard.classList.remove('hidden');
-        loggedInCard.classList.add('hidden');
-        completedCard.classList.add('hidden');
-        
         checkOutBtn.disabled = true;
         checkOutBtn.textContent = "Keluar";
     } 
     else if (record.checkIn && !isCheckedOut) {
-        // SUDAH MASUK, BELUM PULANG: Biarkan input berisi kode, Enable tombol Keluar
-        notStartedCard.classList.add('hidden');
-        loggedInCard.classList.remove('hidden');
-        completedCard.classList.add('hidden');
-        
+        // SUDAH MASUK, BELUM PULANG: Enable tombol Keluar
         checkOutBtn.disabled = false;
         checkOutBtn.textContent = "Keluar";
     } 
     else if (record.checkIn && isCheckedOut) {
         // SUDAH SELESAI: Kosongkan input dan kunci tombol
         codeInput.value = '';
-        notStartedCard.classList.add('hidden');
-        loggedInCard.classList.add('hidden');
-        completedCard.classList.remove('hidden');
-
-        document.getElementById('summary-check-in').textContent = record.checkIn;
-        document.getElementById('summary-check-out').textContent = record.checkOut;
-
         checkOutBtn.disabled = true; 
         checkOutBtn.textContent = "Selesai Hari Ini";
     }
-
-     setTimeout(() => {
-       
-    }, 100);
 }
 
     async function updateLiveAttendanceSummary(isLoadingSheet = false) {
@@ -913,32 +856,22 @@ function showButtonLoading(buttonEl, isLoading) {
     // ==========================================
     // 1. TAMPILAN SAAT LOADING (PERTAMA DIBUKA)
     // ==========================================
-    if (isLoadingSheet) {
+   if (isLoadingSheet) {
         summaryContainer.innerHTML = `
-        <div class="flex flex-col gap-6">
-            <!-- Skeleton Sudah Hadir -->
-            <div>
-                <h4 class="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <i class="fa-solid fa-spinner fa-spin"></i> Memuat Data Presensi...
-                </h4>
-                <div class="space-y-2 animate-pulse mt-2">
-                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-                </div>
+        <div class="flex flex-col items-center justify-center py-6 px-2 text-center">
+            <div class="bg-indigo-50 text-indigo-500 w-12 h-12 rounded-full flex items-center justify-center mb-3">
+                <i class="fa-solid fa-arrows-rotate fa-spin text-xl"></i>
             </div>
-            
-            <hr class="border-slate-100">
-            
-            <!-- Skeleton Belum Hadir -->
-            <div>
-                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <i class="fa-solid fa-spinner fa-spin text-indigo-500"></i> Memuat Data Master...
-                </h4>
-                <div class="space-y-2 animate-pulse mt-2">
-                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-                </div>
+            <h4 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Sinkronisasi Data
+            </h4>
+            <p class="text-xs text-slate-500 mb-5">
+                Memuat data presensi dan master karyawan...
+            </p>
+            <div class="w-full space-y-2 animate-pulse">
+                <div class="h-10 bg-slate-200/70 rounded-lg w-full"></div>
+                <div class="h-10 bg-slate-200/70 rounded-lg w-full"></div>
+                <div class="h-10 bg-slate-200/70 rounded-lg w-full"></div>
             </div>
         </div>`;
         return; // Hentikan fungsi di sini jika sedang loading
@@ -951,7 +884,9 @@ function showButtonLoading(buttonEl, isLoading) {
     
     // Ambil data karyawan
     const recordsToUse = typeof cachedRecords !== 'undefined' ? cachedRecords : [];
-    const presentRecords = recordsToUse.filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--");
+    const presentRecords = recordsToUse
+    .filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--")
+    .sort((a, b) => b.checkIn.localeCompare(a.checkIn));
     const notPresentEmployees = await getNotPresentEmployees();
 
     let html = `<div class="flex flex-col gap-6">`;
