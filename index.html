@@ -754,7 +754,7 @@ async function performAutoCheckIn() {
     
     // 1. Buat Objek Data Sementara (Optimistic)
     const tempRecord = {
-        date: getLocalDateString(), // Pastikan fungsi ini tersedia
+        date: getLocalDateString(),
         employeeCode: activeResolvedEmployee.code,
         employeeName: activeResolvedEmployee.name,
         checkIn: checkInTime,
@@ -762,13 +762,19 @@ async function performAutoCheckIn() {
         notes: "Absen Otomatis"
     };
 
-    // 2. Tampilkan di UI segera
-    cachedRecords.push(tempRecord);
-    renderAdminTable();
+    // 2. Tampilkan di UI secara INSTAN
+    cachedRecords.push(tempRecord); // Masukkan ke memori lokal sementara
+    renderAdminTable();             // Update tabel Admin
+
+    // ---> KODE BARU: Perbarui daftar "Sudah Hadir" di halaman utama SEGERA <---
+    await updateLiveAttendanceSummary(false); 
+
+    // ---> KODE BARU: Munculkan pesan "Selamat bekerja" SETELAH daftar ter-update <---
     showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
 
-    // 3. Proses di Latar Belakang (Background Sync)
+    // 3. Proses di Latar Belakang ke Server (Background Sync)
     try {
+        // Sistem mengirim ke Google Sheet tanpa membuat user menunggu
         await apiService.createRecord(
             activeResolvedEmployee.code, 
             activeResolvedEmployee.name, 
@@ -776,9 +782,8 @@ async function performAutoCheckIn() {
             "Absen Otomatis"
         );
 
-        // Sinkronisasi data asli dari server
+        // Setelah sukses masuk Google Sheet, pastikan data sinkron
         await refreshDashboardData();
-        renderAdminTable();
 
         // Notifikasi Telegram
         const notPresent = await getNotPresentEmployees();
@@ -790,14 +795,16 @@ async function performAutoCheckIn() {
         await sendTelegramMessage(msg);
 
     } catch (error) {
-        // 4. Rollback jika gagal
+        // 4. Rollback (Kembalikan tampilan) jika gagal terkirim ke server
         console.error("Gagal menyimpan ke server:", error);
         cachedRecords = cachedRecords.filter(r => r !== tempRecord); // Hapus record sementara
+        
         renderAdminTable(); // Update tabel kembali
+        await updateLiveAttendanceSummary(false); // Update ulang daftar sudah/belum hadir
+        
         showToast("Gagal Tersimpan", "Gagal mengirim data ke server. Data dihapus dari tampilan.", "error");
     }
-}
-        
+}        
         
         function resetVerificationUI(placeholderMsg) {
             activeResolvedEmployee = null;
