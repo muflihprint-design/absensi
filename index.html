@@ -3,1200 +3,382 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Absensi Karyawan - Cloud Attendance</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Sistem Absensi Karyawan - Supabase Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-        /* Custom scrollbar for clean dashboard tables */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 min-h-screen relative overflow-x-hidden">
+    
+    <!-- Container untuk Notifikasi/Toast -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-full max-w-xs pointer-events-none"></div>
 
-    <!-- NAVIGATION HEADER -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-indigo-100 flex items-center justify-center">
-                        <i class="fa-solid fa-user-check text-lg"></i>
-                    </div>
-                    <div>
-                        <span class="text-lg font-bold text-slate-900 tracking-tight block">PresensiCloud</span>
-                        <span class="text-xs text-indigo-600 font-medium -mt-1 block">Portal Absensi Digital</span>
-                    </div>
-                </div>
-                
-                <!-- Tab Switching System -->
-                <div class="flex items-center space-x-1 sm:space-x-2">
-                    <button id="tab-user-btn" class="flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 bg-indigo-50 text-indigo-700 shadow-sm">
-                        <i class="fa-solid fa-user-clock"></i>
-                        <span class="hidden sm:inline">Halaman Karyawan</span>
-                        <span class="sm:hidden">Karyawan</span>
-                    </button>
-                    <button id="tab-admin-btn" class="flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-slate-600 hover:bg-slate-100">
-                        <i class="fa-solid fa-user-shield"></i>
-                        <span class="hidden sm:inline">Halaman Admin</span>
-                        <span class="sm:hidden">Admin</span>
-                    </button>
-                </div>
-            </div>
+    <header class="bg-white border-b border-slate-200 p-4 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto flex justify-center items-center">
+            <h1 class="text-2xl font-bold text-emerald-600 flex items-center gap-2">
+                <i class="fa-solid fa-fingerprint"></i>
+                ABSENSI
+            </h1>
         </div>
     </header>
 
-    <!-- MAIN CONTENT CONTAINER -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <section id="tab-user-content" class="space-y-6">
-    <div class="bg-indigo-900 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-            <h1 class="text-xl font-bold">Portal Absensi</h1>
-            <p class="text-indigo-200 text-sm">Sistem Presensi Cloud Terintegrasi</p>
-        </div>
-        <div class="text-right bg-white/10 px-4 py-2 rounded-xl backdrop-blur">
-            <span id="live-time" class="text-2xl font-bold font-mono">00:00:00</span>
-            <span id="live-date" class="block text-[10px] uppercase opacity-70">Memuat...</span>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <form id="attendance-form" class="space-y-5">
-                <div>
-    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Kode Karyawan</label>
-    <div class="relative">
-        <input type="text" id="employee-code-input" autocomplete="off" class="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 font-bold uppercase tracking-widest focus:ring-2 focus:ring-indigo-500" placeholder="Ketik kode (Contoh: EMP001)">
-        
-        <div id="verification-badge" class="absolute right-3 top-3 hidden"></div>
-    </div>
-    <p id="employee-resolved-name" class="text-[11px] text-slate-400 mt-2 italic">Masukkan kode untuk mulai verifikasi.</p>
-</div>
-                
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Catatan (Opsional)</label>
-                    <textarea id="attendance-notes" rows="2" class="w-full px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-sm" placeholder="Contoh: WFH / Sakit / Dinas"></textarea>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 pt-2">
-                    <button id="btn-check-out" type="button" disabled 
-        class="py-3 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700 
-               disabled:opacity-40 disabled:cursor-not-allowed transition">
-    Keluar
-</button>
-                </div>
-            </form>
-        </div>
-
-        <div class="lg:col-span-5">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 h-full">
-                <h2 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-chart-line text-indigo-500"></i> Status Hari Ini
-                </h2>
-                
-         
-
-<div id="daily-attendance-summary" class="hidden">
-            </div>
-           
-                <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase">
-                    <span class="flex items-center gap-1"><i class="fa-solid fa-circle text-[8px] text-emerald-500"></i> Server Aktif</span>
-                    <span>Cloud Sync</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-        <!-- ============================================ -->
-        <!-- 2. HALAMAN ADMIN (DASHBOARD TAB)             -->
-        <!-- ============================================ -->
-        <section id="tab-admin-content" class="hidden space-y-6">
+    <main class="max-w-5xl mx-auto p-4 sm:p-6 mt-4">
+        <section id="user-content" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             
-            <!-- Admin Top Stats Section -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Stat Card 1 -->
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                    <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl shrink-0">
-                        <i class="fa-solid fa-users"></i>
-                    </div>
-                    <div>
-                        <span class="text-xs font-medium text-slate-500 block">Total Hadir Hari Ini</span>
-                        <span id="stat-total-present" class="text-2xl font-extrabold text-slate-900 block mt-0.5">0</span>
-                    </div>
+            <!-- Panel Absensi -->
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 text-center relative overflow-hidden">
+                <!-- Aksen Dekoratif -->
+                <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10"></div>
+
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                    <i class="fa-solid fa-user-check text-2xl"></i>
                 </div>
-                <!-- Stat Card 2 -->
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                    <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl shrink-0">
-                        <i class="fa-solid fa-user-clock text-amber-600"></i>
-                    </div>
-                    <div>
-                        <span class="text-xs font-medium text-slate-500 block">Aktif Bekerja</span>
-                        <span id="stat-active-working" class="text-2xl font-extrabold text-slate-900 block mt-0.5">0</span>
-                    </div>
+                
+                <!-- JAM DIGITAL REALTIME -->
+                <div class="mb-8">
+                    <div id="live-clock" class="text-4xl sm:text-5xl font-bold text-slate-800 font-mono tracking-tight drop-shadow-sm">00:00:00</div>
+                    <div id="live-date" class="text-sm sm:text-base text-slate-500 font-medium mt-2 bg-slate-50 inline-block px-4 py-1 rounded-full border border-slate-100">Memuat tanggal...</div>
                 </div>
-                <!-- Stat Card 3 -->
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                    <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl shrink-0">
-                        <i class="fa-solid fa-circle-check text-emerald-600"></i>
+
+                <h2 class="text-lg font-bold text-slate-700 mb-4 uppercase tracking-wide">Verifikasi Kehadiran</h2>
+                
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-keyboard text-slate-400"></i>
                     </div>
-                    <div>
-                        <span class="text-xs font-medium text-slate-500 block">Selesai Bekerja</span>
-                        <span id="stat-completed-working" class="text-2xl font-extrabold text-slate-900 block mt-0.5">0</span>
-                    </div>
+                    <input type="text" id="employee-code-input" class="w-full pl-10 pr-4 py-4 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-center font-bold text-xl uppercase transition-all shadow-sm" placeholder="KODE KARYAWAN" autocomplete="off">
                 </div>
-                <!-- Stat Card 4 -->
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
-                    <div class="w-12 h-12 bg-indigo-50 text-indigo-700 rounded-xl flex items-center justify-center text-xl shrink-0">
-                        <i class="fa-solid fa-business-time"></i>
-                    </div>
-                    <div>
-                        <span class="text-xs font-medium text-slate-500 block">Rata-rata Durasi</span>
-                        <span id="stat-avg-duration" class="text-2xl font-extrabold text-slate-900 block mt-0.5">0 jam</span>
-                    </div>
-                </div>
+                
+                <p id="employee-resolved-name" class="mt-3 text-sm text-slate-500 font-medium transition-all duration-300">Silakan masukkan 6 digit kode Anda</p>
+                
+                <button id="btn-check-out" disabled class="mt-5 w-full p-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-person-walking-arrow-right"></i> Absen Keluar
+                </button>
             </div>
 
-            <!-- Filter Controls and Content -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                        <h2 class="text-lg font-bold text-slate-900">Rekapitulasi Absensi Realtime</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Pantau, filter, dan unduh data kehadiran karyawan perusahaan Anda.</p>
-                    </div>
-                    
-                    <!-- Export Button -->
-                    <button id="btn-export-csv" class="flex items-center justify-center space-x-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-sm font-semibold shadow-md shadow-emerald-50 transition hover:-translate-y-0.5">
-                        <i class="fa-solid fa-file-excel text-base"></i>
-                        <span>Ekspor Data ke CSV</span>
-                    </button>
-                </div>
-
-                <!-- Live Filters -->
-                <div class="p-5 border-b border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Filter Tanggal -->
-                    <div>
-                        <label for="filter-date" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Filter Berdasarkan Tanggal</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                                <i class="fa-regular fa-calendar-alt"></i>
-                            </span>
-                            <input type="date" id="filter-date" class="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                        </div>
-                    </div>
-                    <!-- Filter Nama / Kode -->
-                    <div>
-                        <label for="filter-name" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Cari Nama / Kode Karyawan</label>
-                        <div class="relative">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                                <i class="fa-solid fa-magnifying-glass"></i>
-                            </span>
-                            <input type="text" id="filter-name" placeholder="Ketik nama atau kode (EMP...)" class="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                        </div>
-                    </div>
-                    <!-- Clear Filter / Status -->
-                    <div class="flex items-end">
-                        <button id="btn-clear-filters" class="w-full text-center px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-semibold transition">
-                            <i class="fa-solid fa-arrows-rotate mr-2"></i>Reset Filter
-                        </button>
-                    </div>
-                </div>
-
-                <!-- TABLE SECTION -->
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50/75 border-b border-slate-200">
-                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal</th>
-                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Kode</th>
-                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Karyawan</th>
-                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Mulai Presensi</th>
-                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Selesai Presensi</th>
-                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Durasi Kerja</th>
-                                <th class="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Keterangan / Catatan</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendance-table-body" class="divide-y divide-slate-100">
-                            <!-- Rows will be injected here dynamically by Javascript -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Table Empty State -->
-                <div id="table-empty-state" class="hidden text-center py-16 px-4">
-                    <div class="w-20 h-20 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                        <i class="fa-solid fa-folder-open text-3xl"></i>
-                    </div>
-                    <h3 class="text-base font-semibold text-slate-800">Tidak Ada Data Ditemukan</h3>
-                    <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Tidak ada rekapan absensi yang cocok dengan kriteria pencarian Anda.</p>
-                </div>
-            </div>
+            <!-- Container Summary dari Script -->
+            <div id="daily-attendance-summary" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all duration-300"></div>
+            
         </section>
     </main>
 
-    <!-- TOAST NOTIFICATION CONTAINER -->
-    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-3 pointer-events-none"></div>
-
-    <!-- FOOTER -->
-    <footer class="bg-white border-t border-slate-200 py-6 mt-12">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            <p class="text-xs text-slate-400">&copy; 2026 Portal PresensiCloud. Hak Cipta Dilindungi Undang-Undang.</p>
-            <p class="text-[10px] text-slate-400 mt-1">Platform dirancang responsif, interaktif & modern dengan integrasi API Cloud Ready.</p>
-        </div>
-    </footer>
-
-    <!-- ============================================ -->
-    <!-- LOGIKA JAVASCRIPT & ARSITEKTUR APLIKASI      -->
-    <!-- ============================================ -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbdcp4VsQurcSK9MxSdSpagRiwYp61Gebjy0-9Bf7PFmJ3XGfLVlzPRfrdix_-g4-qMA/exec"; 
+        // Konfigurasi Supabase
+        const SUPABASE_URL = 'https://tigszfvmbpvznotykryx.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpZ3N6ZnZtYnB2em5vdHlrcnl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MzQwMjcsImV4cCI6MjA5OTMxMDAyN30.O0-y9FI_sikkPVig2XNDJ_zlTnfJZv-hRirPurs8yQc';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // State Data
         let masterEmployeeList = [];
-function getLocalDateString(date = new Date()) {
-    // Memastikan waktu lokal benar
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-        
-class SheetsApiService {
-    constructor() {}
+        let cachedRecords = [];
 
-    // Gabungan pengecekan fallback
-    isFallbackMode() {
-        return SCRIPT_URL === "URL_WEB_APP_ANDA" || SCRIPT_URL.trim() === "" || !navigator.onLine;
-    }
+        // Fungsi Bantuan Waktu & Tanggal
+        function getLocalDateString() { return new Date().toISOString().split('T')[0]; }
+        function formatDate(date) { return date; }
+        function cleanTime(time) { return time ? time : "--"; }
 
-    // 1. GET ALL DATA
-    async fetchAllRecords() {
-        if (this.isFallbackMode()) return this.getLocalFallbackRecords();
-        try {
-            const response = await fetch(`${SCRIPT_URL}?action=fetchAll`);
-            if (!response.ok) throw new Error("Gagal mengambil data.");
-            return await response.json();
-        } catch (err) {
-            console.warn("Koneksi gagal, beralih ke local storage:", err);
-            return this.getLocalFallbackRecords();
-        }
-    }
-
-    async fetchEmployeeList() {
-    try {
-        // Asumsi: Anda memiliki endpoint untuk daftar karyawan
-        const response = await fetch(`${SCRIPT_URL}?action=fetchEmployees`);
-        return await response.json();
-    } catch (err) {
-        console.error("Gagal memuat daftar karyawan:", err);
-        return [];
-    }
-}
-
-    // 2. VERIFY EMPLOYEE
-async verifyEmployee(code) {
-    // 1. Pastikan variabel tanggal konsisten
-    const todayStr = getLocalDateString();
-    
-    // 2. Debugging log
-    console.log("--- DEBUG FRONTEND ---");
-    console.log("Kode yang diverifikasi: ", code);
-    console.log("Tanggal yang dikirim: ", todayStr);
-
-    // 3. Gunakan URL yang sudah terenkode dengan benar
-  const url = new URL(SCRIPT_URL);
-    url.searchParams.append('action', 'verify');
-    url.searchParams.append('code', code);
-    url.searchParams.append('date', todayStr);
-
-    try {
-        const response = await fetch(url.toString(), {
-            method: 'GET',
-            redirect: 'follow' // Penting untuk menghindari error Redirect
-        });
-
-        if (!response.ok) throw new Error("Server error: " + response.status);
-
-        const data = await response.json();
-        
-if (data.success && data.exists) {
-    localStorage.setItem(`cache_verify_${code}`, JSON.stringify(data));
-
-    // Update UI Tombol
-    
-    // Logika Notifikasi yang lebih aman
-  if (data.record) {
-    // Cek apakah checkOut ada dan isinya bukan "--" atau null
-    const hasCheckOut = data.record.checkOut && data.record.checkOut !== "--";
-    const hasCheckIn = data.record.checkIn && data.record.checkIn !== "--";
-
-    if (hasCheckOut) {
-        // Notifikasi hanya muncul jika sudah absen pulang (selesai)
-        const statusMsg = "Anda sudah absen Masuk dan Keluar hari ini.";
-        console.info("Status Absen:", statusMsg);
-        alert(statusMsg); 
-    } else if (hasCheckIn) {
-        // Cukup log ke console, tidak perlu alert agar tidak mengganggu
-        console.info("Status Absen: Anda sudah absen Masuk. Siap untuk absen Keluar.");
-    } else {
-        console.info("Status Absen: Data absen ditemukan, namun status tidak lengkap.");
-    }
-} else {
-    console.info("Status Absen: Belum ada record hari ini.");
-}
-}
-        
-        return data;
-    } catch (err) {
-        console.warn("Gagal memverifikasi, mencoba cache lokal:", err);
-        const cached = localStorage.getItem(`cache_verify_${code}`);
-        
-        if (cached) {
-            const data = JSON.parse(cached);
-            data.isCached = true;
+        // Fungsi Notifikasi Modern (Pengganti Alert)
+        function showToast(title, message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
             
-            // Pastikan tombol tetap ter-disable jika data dari cache menunjukkan sudah absen
-                        
-            return data;
-        }
-        
-        return { success: false, error: "Tidak dapat terhubung ke server." };
-    }
-}    
-    // 3. POST NEW RECORD (Check In)
-    async createRecord(employeeCode, employeeName, checkInTime, notes) {
-        const todayStr = getLocalDateString();
-        const payload = { action: "checkIn", employeeCode, employeeName, date: todayStr, checkIn: checkInTime, notes };
-        if (this.isFallbackMode()) return this.localFallbackCreate(payload);
+            let borderColor = type === 'success' ? 'border-emerald-500' : (type === 'error' ? 'border-rose-500' : 'border-blue-500');
+            let icon = type === 'success' ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' : (type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-rose-500"></i>' : '<i class="fa-solid fa-circle-info text-blue-500"></i>');
 
-        try {
-            const response = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error("HTTP Error " + response.status);
-            const resJson = await response.json();
-            return resJson.record;
-        } catch (err) {
-            return this.localFallbackCreate(payload);
-        }
-    }
-
-    // 4. POST UPDATE RECORD (Check Out)
-   async createCheckOutRecord(employeeCode, employeeName, checkOutTime, notes) {
-    const todayStr = getLocalDateString();
-    
-    // 1. Ubah action menjadi "checkOut"
-    // 2. Ubah properti checkIn menjadi checkOut
-    const payload = { 
-        action: "checkOut", 
-        employeeCode, 
-        employeeName, 
-        date: todayStr, 
-        checkOut: checkOutTime, 
-        notes 
-    };
-
-    if (this.isFallbackMode()) return this.localFallbackCheckout(payload);
-
-    try {
-        const response = await fetch(SCRIPT_URL, { 
-            method: "POST", 
-            body: JSON.stringify(payload) 
-        });
-        
-        if (!response.ok) throw new Error("HTTP Error " + response.status);
-        
-        const resJson = await response.json();
-        return resJson.record;
-    } catch (err) {
-        // Pastikan Anda memanggil fallback yang sesuai
-        return this.localFallbackCheckout(payload);
-    }
-}
-
-    // --- METHOD CADANGAN LOKAL ---
-    getLocalFallbackRecords() {
-        const localKey = "cloud_attendance_records_nocode";
-        if (!localStorage.getItem(localKey)) {
-            // ... (logika sample data Anda tetap di sini)
-            localStorage.setItem(localKey, JSON.stringify([]));
-        }
-        return JSON.parse(localStorage.getItem(localKey)) || [];
-    }
-
-
-    localFallbackCreate(payload) {
-        const records = this.getLocalFallbackRecords();
-        const newRecord = { ...payload, id: "rec_" + Date.now(), checkOut: null, duration: "--", notes: payload.notes || "Hadir" };
-        records.push(newRecord);
-        localStorage.setItem("cloud_attendance_records_nocode", JSON.stringify(records));
-        return newRecord;
-    }
-
-    localFallbackCheckout(payload) {
-        const records = this.getLocalFallbackRecords();
-        const idx = records.findIndex(r => r.employeeCode === payload.employeeCode && r.date === payload.date && r.checkOut === null);
-        if (idx === -1) return null;
-        records[idx].checkOut = payload.checkOut;
-        records[idx].duration = "Selesai"; // Simplifikasi durasi
-        if (payload.notes) records[idx].notes = payload.notes;
-        localStorage.setItem("cloud_attendance_records_nocode", JSON.stringify(records));
-        return records[idx];
-    }
-
-
-    
-}
-
-// Inisialisasi service setelah kelas didefinisikan
-const apiService = new SheetsApiService();
-      
-        let currentTab = "user";
-        let cachedRecords = []; 
-        let activeResolvedEmployee = null; // Menyimpan data karyawan terverifikasi saat ini
-
-        // Referensi Elemen DOM Navigasi
-        const tabUserBtn = document.getElementById('tab-user-btn');
-        const tabAdminBtn = document.getElementById('tab-admin-btn');
-        const tabUserContent = document.getElementById('tab-user-content');
-        const tabAdminContent = document.getElementById('tab-admin-content');
-
-        document.addEventListener("DOMContentLoaded", async () => {
-    // 1. Inisialisasi fungsi-fungsi UI dan setup dasar
-    initRealtimeClock();
-    setupTabNavigation();
-    setupAttendanceForm();
-    setupAdminDashboard();
-    
-    // 2. Siapkan data lokal (cache) sebelum menunggu data dari server
-    // (Sesuaikan nama key localStorage jika Anda menggunakan nama yang berbeda)
-    const localRecords = localStorage.getItem("cloud_attendance_records_nocode");
-    window.cachedRecords = localRecords ? JSON.parse(localRecords) : [];
-    
-    // 3. Panggil langsung agar karyawan yang sudah absen dari cache tampil, 
-    // dan tampilkan skeleton loading untuk daftar yang "Belum Hadir"
-    await updateLiveAttendanceSummary(true);
-    
-    try {
-        // 4. Tarik data karyawan dari API/Sheet saat pertama kali buka
-        masterEmployeeList = await apiService.fetchEmployeeList();
-        console.log("Data karyawan dimuat:", masterEmployeeList);
-        
-        // Memperbarui dashboard (asumsinya ini juga akan menarik record absensi terbaru)
-        // Gunakan await jika refreshDashboardData mengembalikan Promise
-        await refreshDashboardData(); 
-        
-        // 5. Matikan efek loading dan tampilkan data perbandingan (Belum Hadir) yang sebenarnya
-        await updateLiveAttendanceSummary(false);
-        
-    } catch (error) {
-        console.error("Terjadi kesalahan saat memuat data dari server:", error);
-        
-        // Pastikan efek loading dimatikan meskipun terjadi error jaringan
-        await updateLiveAttendanceSummary(false);
-    }
-});
-        
-        function initRealtimeClock() {
-    const timeEl = document.getElementById('live-time');
-    const dateEl = document.getElementById('live-date');
-    const cardDateEl = document.getElementById('status-card-date');
-
-    function updateTime() {
-        const now = new Date();
-        
-        // Update Jam
-        if (timeEl) {
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            timeEl.textContent = `${hours}:${minutes}:${seconds}`;
-        }
-
-        // Setup format tanggal
-        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-        
-        const dayName = days[now.getDay()];
-        const dateNum = now.getDate();
-        const monthName = months[now.getMonth()];
-        const yearNum = now.getFullYear();
-        const formattedDate = `${dayName}, ${dateNum} ${monthName} ${yearNum}`;
-
-        // Update Tanggal (dengan pengecekan elemen)
-        if (dateEl) {
-            dateEl.textContent = formattedDate;
-        }
-
-        // Update Card Date (hanya jika elemen ada)
-        if (cardDateEl) {
-            cardDateEl.textContent = formattedDate;
-        }
-    }
-
-    // Jalankan pertama kali
-    updateTime();
-    
-    // Interval 1 detik
-    setInterval(updateTime, 1000);
-}
-        
-        
-
-        function setupTabNavigation() {
-            tabUserBtn.addEventListener('click', () => {
-                switchTab('user');
-            });
-
-            tabAdminBtn.addEventListener('click', () => {
-                switchTab('admin');
-                refreshDashboardData(); 
-            });
-        }
-
-        function switchTab(tabName) {
-            currentTab = tabName;
-
-            if (tabName === 'user') {
-                tabUserBtn.className = "flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 bg-indigo-50 text-indigo-700 shadow-sm";
-                tabAdminBtn.className = "flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-slate-600 hover:bg-slate-100";
-                
-                tabUserContent.classList.remove('hidden');
-                tabAdminContent.classList.add('hidden');
-            } else {
-                tabUserBtn.className = "flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 text-slate-600 hover:bg-slate-100";
-                tabAdminBtn.className = "flex items-center space-x-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 bg-indigo-50 text-indigo-700 shadow-sm";
-                
-                tabUserContent.classList.add('hidden');
-                tabAdminContent.classList.remove('hidden');
-            }
-        }
-
-   function setupAttendanceForm() {
-    const codeInput = document.getElementById('employee-code-input');
-    const resolvedNameText = document.getElementById('employee-resolved-name');
-    const verificationBadge = document.getElementById('verification-badge');
-    const checkOutBtn = document.getElementById('btn-check-out');
-
-    let debounceTimer;
-
-    codeInput.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        const enteredCode = codeInput.value.trim().toUpperCase();
-        
-        // 1. Validasi awal
-        if (enteredCode.length === 0) {
-    // Panggil dengan false agar status tidak hilang saat input dikosongkan
-    resetVerificationUI("Masukkan kode karyawan untuk divalidasi oleh sistem cloud.", false);
-    return;
-}
-
-        // 2. Validasi panjang karakter
-        if (enteredCode.length < 6) {
-            resolvedNameText.textContent = "Kode terlalu pendek (minimal 6 karakter)...";
-            resolvedNameText.className = "text-xs font-semibold text-amber-500";
-            verificationBadge.classList.add('hidden');
-            checkOutBtn.disabled = true;
-            return; 
-        }
-codeInput.disabled = true;
-        // 3. Jika >= 6 karakter, tampilkan status loading
-        resolvedNameText.textContent = "Menghubungi cloud...";
-        resolvedNameText.className = "text-xs font-semibold text-indigo-500 animate-pulse";
-        verificationBadge.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-indigo-500"></i>';
-        verificationBadge.classList.remove('hidden');
-
-        // 4. Debounce proses verifikasi
-        debounceTimer = setTimeout(async () => {
-            const response = await apiService.verifyEmployee(enteredCode);
+            toast.className = `p-4 mb-2 bg-white rounded-xl shadow-lg border-l-4 ${borderColor} transform transition-all duration-300 translate-x-full flex items-start gap-3 pointer-events-auto`;
+            toast.innerHTML = `
+                <div class="mt-1">${icon}</div>
+                <div>
+                    <h4 class="font-bold text-slate-800 text-sm">${title}</h4>
+                    <p class="text-xs text-slate-600 mt-0.5">${message}</p>
+                </div>
+            `;
             
-            if (response && response.success && response.exists) {
-                const { user, record } = response;
-                activeResolvedEmployee = { code: user.code, name: user.name };
+            container.appendChild(toast);
+            
+            // Animasi masuk
+            requestAnimationFrame(() => {
+                setTimeout(() => toast.classList.remove('translate-x-full'), 10);
+            });
+            
+            // Animasi keluar dan hapus elemen setelah 3.5 detik
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
 
-                resolvedNameText.textContent = `Karyawan Teridentifikasi: ${user.name}`;
-                resolvedNameText.className = "text-xs font-bold text-emerald-600";
-                verificationBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
-                               
-                if (record === null) {
-    const todayDate = getLocalDateString();
-    
-    // 1. CEK INGATAN LOKAL: Apakah dia baru saja absen masuk di perangkat ini hari ini?
-    if (sessionStorage.getItem(`sudah_masuk_${user.code}`) === todayDate) {
-        showToast("Informasi", `Sistem mencatat ${user.name} baru saja melakukan absen masuk.`, "info");
-    } else {
-        // 2. Jika belum, lakukan proses absen ke Google Sheets
-        await performAutoCheckIn();
-        
-        // 3. Simpan di ingatan browser bahwa karyawan ini sudah absen hari ini
-        sessionStorage.setItem(`sudah_masuk_${user.code}`, todayDate);
-    }
-    
-    // 4. Sengaja dikirim parameter "null" agar tampilan form langsung terhapus (Kiosk Mode)
-    updateUserStatusDisplay(user.name, user.code, null);
-    
-} else {
-    // 5. Jika record dari server TIDAK null (artinya karyawan sudah absen masuk sebelumnya dan sekarang men-scan untuk absen pulang)
-    updateUserStatusDisplay(user.name, user.code, record);
-}
-} else {
-                activeResolvedEmployee = null;
-                resolvedNameText.textContent = "Kode karyawan tidak terdaftar.";
-                resolvedNameText.className = "text-xs font-semibold text-rose-500";
-                verificationBadge.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
-                checkOutBtn.disabled = true;
-                resetStatusPanelToVerificationRequired();
+        // Fungsi Jam Digital
+        function initClock() {
+            function updateTime() {
+                const now = new Date();
+                
+                const timeString = now.toLocaleTimeString('id-ID', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                }).replace(/\./g, ':');
+                
+                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const dateString = now.toLocaleDateString('id-ID', dateOptions);
+                
+                const clockEl = document.getElementById('live-clock');
+                const dateEl = document.getElementById('live-date');
+                
+                if (clockEl) clockEl.textContent = timeString;
+                if (dateEl) dateEl.textContent = dateString;
             }
-            codeInput.disabled = false;
-             codeInput.focus();
-        }, 600);
-    });
-
-    // LOGIKA KLIK TOMBOL ABSEN KELUAR
-    checkOutBtn.addEventListener('click', async () => {
-        if (!activeResolvedEmployee) {
-            showToast("Validasi Gagal", "Masukkan kode karyawan yang valid!", "warning");
-            return;
+            
+            updateTime();
+            setInterval(updateTime, 1000);
         }
 
-        checkOutBtn.disabled = true;
-        checkOutBtn.textContent = "Memproses...";
-        showButtonLoading(checkOutBtn, true);
+        // Layanan Komunikasi dengan Supabase
+        const apiService = {
+            async fetchAllEmployees() {
+                const { data } = await supabaseClient.from('employees').select('*');
+                return data || [];
+            },
+            async fetchAllRecords() {
+                const today = getLocalDateString();
+                // Mengambil data presensi hari ini saja untuk optimasi frontend user
+                const { data } = await supabaseClient.from('attendance').select('*').eq('date', today).order('checkIn', { ascending: false });
+                return data || [];
+            },
+            async verifyEmployee(code) {
+                const { data: user } = await supabaseClient.from('employees').select('*').eq('code', code).single();
+                if (!user) return { success: false };
+                
+                const today = getLocalDateString();
+                const { data: record } = await supabaseClient.from('attendance').select('*').eq('employeeCode', code).eq('date', today).maybeSingle();
+                return { success: true, user, record };
+            },
+            async createRecord(code, name, time) {
+                const today = getLocalDateString();
+                return await supabaseClient.from('attendance').insert([{ date: today, employeeCode: code, employeeName: name, checkIn: time }]);
+            },
+            async checkOut(code, time) {
+                const today = getLocalDateString();
+                return await supabaseClient.from('attendance').update({ checkOut: time }).eq('employeeCode', code).eq('date', today);
+            }
+        };
 
-      try {
-    const now = new Date();
-    const checkOutTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-    const todayStr = getLocalDateString(now);
-
-    // KODE DIPERBARUI: Menambahkan activeResolvedEmployee.name sebagai argumen kedua
-    const result = await apiService.createCheckOutRecord(
-        activeResolvedEmployee.code, 
-        activeResolvedEmployee.name, // Pastikan nama dikirim di sini
-        checkOutTime
-    );
-
-    updateUserStatusDisplay(activeResolvedEmployee.name, activeResolvedEmployee.code, result);
-    showToast("Sukses Pulang", `Terima kasih, ${activeResolvedEmployee.name}. Absen keluar Anda tersimpan.`, "success");
-    
-} catch (error) {
-    checkOutBtn.disabled = false;
-    checkOutBtn.textContent = "Keluar";
-    showToast("Terjadi Kendala", error.message || "Gagal melakukan absensi keluar. Silakan coba lagi.", "error");
-} finally {
-    showButtonLoading(checkOutBtn, false);
-}
-          codeInput.disabled = false;
-             codeInput.focus();
-    });
-      
-} // <--- Hanya ada SATU penutup di sini
-        
-        // Fungsi utilitas helper demo untuk mengisi kode secara instan
-        window.fillDemoCode = function(code) {
-            const codeInput = document.getElementById('employee-code-input');
-            codeInput.value = code;
-            codeInput.dispatchEvent(new Event('input'));
-        }
-
-async function performAutoCheckIn() {
-    const now = new Date();
-    const checkInTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-    
-    // 1. Buat Objek Data Sementara (Optimistic)
-    const tempRecord = {
-        date: getLocalDateString(),
-        employeeCode: activeResolvedEmployee.code,
-        employeeName: activeResolvedEmployee.name,
-        checkIn: checkInTime,
-        checkOut: "--",
-        notes: "Absen Otomatis"
-    };
-
-    // 2. Tampilkan di UI secara INSTAN
-    cachedRecords.push(tempRecord); // Masukkan ke memori lokal sementara
-    renderAdminTable();             // Update tabel Admin
-
-    // ---> KODE BARU: Perbarui daftar "Sudah Hadir" di halaman utama SEGERA <---
-    await updateLiveAttendanceSummary(false); 
-
-    // ---> KODE BARU: Munculkan pesan "Selamat bekerja" SETELAH daftar ter-update <---
-    showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
-
-    // 3. Proses di Latar Belakang ke Server (Background Sync)
-    try {
-        // Sistem mengirim ke Google Sheet tanpa membuat user menunggu
-        await apiService.createRecord(
-            activeResolvedEmployee.code, 
-            activeResolvedEmployee.name, 
-            checkInTime, 
-            "Absen Otomatis"
-        );
-
-        // Setelah sukses masuk Google Sheet, pastikan data sinkron
-        await refreshDashboardData();
-
-        // Notifikasi Telegram
-        const notPresent = await getNotPresentEmployees();
-        let msg = `<b>🔔 Absen Masuk</b>\n${activeResolvedEmployee.name} telah hadir.\n\n`;
-        if (notPresent.length > 0) {
-            msg += `<b>Belum Absen:</b>\n`;
-            notPresent.forEach(emp => { msg += `• ${emp.name}\n`; });
-        }
-        await sendTelegramMessage(msg);
-
-    } catch (error) {
-        // 4. Rollback (Kembalikan tampilan) jika gagal terkirim ke server
-        console.error("Gagal menyimpan ke server:", error);
-        cachedRecords = cachedRecords.filter(r => r !== tempRecord); // Hapus record sementara
-        
-        renderAdminTable(); // Update tabel kembali
-        await updateLiveAttendanceSummary(false); // Update ulang daftar sudah/belum hadir
-        
-        showToast("Gagal Tersimpan", "Gagal mengirim data ke server. Data dihapus dari tampilan.", "error");
-    }
-}        
-        
-        function resetVerificationUI(placeholderMsg) {
-            activeResolvedEmployee = null;
-            document.getElementById('employee-resolved-name').textContent = placeholderMsg;
-            document.getElementById('employee-resolved-name').className = "text-xs font-semibold text-slate-400 italic";
-            document.getElementById('verification-badge').classList.add('hidden');
-            document.getElementById('btn-check-out').disabled = true;
-            resetStatusPanelToVerificationRequired();
-        }
-
-        function resetStatusPanelToVerificationRequired(isNewCode = false) {
-   }
-
-function showButtonLoading(buttonEl, isLoading) {
-    if (!buttonEl) return;
-
-    const textSpan = buttonEl.querySelector('.btn-text');
-    const spinnerSpan = buttonEl.querySelector('.btn-spinner');
-
-    if (isLoading) {
-        // Hapus: buttonEl.disabled = true; (Logika ini pindahkan ke event listener)
-        if (textSpan) textSpan.style.visibility = 'hidden';
-        if (spinnerSpan) {
-            spinnerSpan.classList.remove('hidden');
-            spinnerSpan.classList.add('flex');
-        }
-    } else {
-        // Hapus: buttonEl.disabled = false; (Logika ini pindahkan ke event listener)
-        if (textSpan) textSpan.style.visibility = 'visible';
-        if (spinnerSpan) {
-            spinnerSpan.classList.add('hidden');
-            spinnerSpan.classList.remove('flex');
-        }
-    }
-}
-        
- function updateUserStatusDisplay(employeeName, employeeCode, record) {
-    const checkOutBtn = document.getElementById('btn-check-out');
-    const codeInput = document.getElementById('employee-code-input');
-
-    if (!checkOutBtn) return;
-
-    const isCheckedOut = record && record.checkOut && record.checkOut !== "--" && record.checkOut !== "";
-
-    if (!record) {
-        // BELUM ABSEN: Kosongkan input dan kunci tombol
-        codeInput.value = ''; 
-        checkOutBtn.disabled = true;
-        checkOutBtn.textContent = "Keluar";
-    } 
-    else if (record.checkIn && !isCheckedOut) {
-        // SUDAH MASUK, BELUM PULANG: Enable tombol Keluar
-        checkOutBtn.disabled = false;
-        checkOutBtn.textContent = "Keluar";
-    } 
-    else if (record.checkIn && isCheckedOut) {
-        // SUDAH SELESAI: Kosongkan input dan kunci tombol
-        codeInput.value = '';
-        checkOutBtn.disabled = true; 
-        checkOutBtn.textContent = "Selesai Hari Ini";
-    }
-}
-
-    async function updateLiveAttendanceSummary(isLoadingSheet = false) {
-    const summaryContainer = document.getElementById('daily-attendance-summary');
-    if (!summaryContainer) return;
-    
-    // Tampilkan container
-    summaryContainer.classList.remove('hidden');
-
-    // ==========================================
-    // 1. TAMPILAN SAAT LOADING (PERTAMA DIBUKA)
-    // ==========================================
-   if (isLoadingSheet) {
-        summaryContainer.innerHTML = `
-        <div class="flex flex-col items-center justify-center py-6 px-2 text-center">
-            <div class="bg-indigo-50 text-indigo-500 w-12 h-12 rounded-full flex items-center justify-center mb-3">
-                <i class="fa-solid fa-arrows-rotate fa-spin text-xl"></i>
-            </div>
-            <h4 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Sinkronisasi Data
-            </h4>
-            <p class="text-xs text-slate-500 mb-5">
-                Memuat data presensi dan master karyawan...
-            </p>
-            <div class="w-full space-y-2 animate-pulse">
-                <div class="h-10 bg-slate-200/70 rounded-lg w-full"></div>
-                <div class="h-10 bg-slate-200/70 rounded-lg w-full"></div>
-                <div class="h-10 bg-slate-200/70 rounded-lg w-full"></div>
-            </div>
-        </div>`;
-        return; // Hentikan fungsi di sini jika sedang loading
-    }
-
-    // ==========================================
-    // 2. TAMPILAN SAAT DATA SELESAI DIMUAT
-    // ==========================================
-    const todayStr = getLocalDateString();
-    
-    // Ambil data karyawan
-    const recordsToUse = typeof cachedRecords !== 'undefined' ? cachedRecords : [];
-    const presentRecords = recordsToUse
-    .filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--")
-    .sort((a, b) => b.checkIn.localeCompare(a.checkIn));
-    const notPresentEmployees = await getNotPresentEmployees();
-
-    let html = `<div class="flex flex-col gap-6">`;
-    
-    // --- TAMPILAN KARYAWAN SUDAH HADIR ---
-    html += `<div>
-        <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <i class="fa-solid fa-user-check"></i> Sudah Hadir (${presentRecords.length})
-        </h4>`;
-        
-    if (presentRecords.length > 0) {
-        html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
-        presentRecords.forEach(r => {
-            html += `
-            <li class="flex justify-between items-center bg-emerald-50/50 border border-emerald-100 px-3 py-2 rounded-lg text-sm text-emerald-800">
-                <span class="font-semibold">${r.employeeName || 'Karyawan'}</span>
-                <span class="text-xs font-mono bg-emerald-100 px-2 py-1 rounded-md">${r.checkIn}</span>
-            </li>`;
-        });
-        html += `</ul>`;
-    } else {
-        html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada presensi masuk hari ini.</p>`;
-    }
-    html += `</div>`;
-
-    html += `<hr class="border-slate-100">`;
-
-    // --- TAMPILAN KARYAWAN BELUM HADIR ---
-    html += `<div>
-        <h4 class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <i class="fa-solid fa-user-clock"></i> Belum Hadir (${notPresentEmployees.length})
-        </h4>`;
-        
-    if (notPresentEmployees.length > 0) {
-        html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
-        notPresentEmployees.forEach(emp => {
-            html += `
-            <li class="flex justify-between items-center bg-slate-50 border border-slate-100 px-3 py-2 rounded-lg text-sm text-slate-600">
-                <span class="font-semibold">${emp.name}</span>
-                <span class="text-[10px] uppercase font-bold text-slate-400">${emp.code}</span>
-            </li>`;
-        });
-        html += `</ul>`;
-    } else {
-        html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Semua karyawan sudah hadir.</p>`;
-    }
-    html += `</div>`; 
-
-    html += `</div>`; 
-
-    summaryContainer.innerHTML = html;
-}
-        
-        function setupAdminDashboard() {
-            const filterDateInput = document.getElementById('filter-date');
-            const filterNameInput = document.getElementById('filter-name');
-            const clearFiltersBtn = document.getElementById('btn-clear-filters');
-            const exportCsvBtn = document.getElementById('btn-export-csv');
-
+        // Fungsi Bantuan untuk mendapatkan karyawan yang belum hadir
+        async function getNotPresentEmployees() {
+            if (masterEmployeeList.length === 0) {
+                masterEmployeeList = await apiService.fetchAllEmployees();
+            }
             const todayStr = getLocalDateString();
-            filterDateInput.value = todayStr;
-
-            filterDateInput.addEventListener('change', renderAdminTable);
-            filterNameInput.addEventListener('input', renderAdminTable);
-
-            clearFiltersBtn.addEventListener('click', () => {
-                filterDateInput.value = todayStr;
-                filterNameInput.value = "";
-                renderAdminTable();
-                showToast("Filter Reset", "Kriteria pencarian dikembalikan ke hari ini.", "info");
-            });
-
-            exportCsvBtn.addEventListener('click', () => {
-                exportDataToCSV();
-            });
+            const presentCodes = cachedRecords
+                .filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--")
+                .map(r => r.employeeCode);
+                
+            return masterEmployeeList.filter(emp => !presentCodes.includes(emp.code));
         }
 
-      async function refreshDashboardData() {
-    try {
-        // 1. Ambil data mentah dari server
-        const rawData = await apiService.fetchAllRecords();
-        
-        // 2. Format tanggal dan waktu (Sangat Penting agar tidak error)
-        cachedRecords = rawData.map(r => ({ 
-            ...r,
-            date: formatDate(r.date),
-            checkIn: cleanTime(r.checkIn),
-            checkOut: cleanTime(r.checkOut)
-        }));
-        
-        // 3. Update tampilan tabel dan statistik Admin
-        renderAdminTable();
-        calculateAdminStats();
-        
-        // 4. Update ringkasan realtime di halaman User
-        if (typeof updateLiveAttendanceSummary === "function") {
-            await updateLiveAttendanceSummary();
+        // Fungsi Ringkasan Live dari pengguna
+        async function updateLiveAttendanceSummary(isLoadingSheet = false) {
+            const summaryContainer = document.getElementById('daily-attendance-summary');
+            if (!summaryContainer) return;
+            
+            summaryContainer.classList.remove('hidden');
+
+            // 1. TAMPILAN SAAT LOADING
+            if (isLoadingSheet) {
+                summaryContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-6 px-2 text-center">
+                    <div class="bg-indigo-50 text-indigo-500 w-12 h-12 rounded-full flex items-center justify-center mb-3">
+                        <i class="fa-solid fa-arrows-rotate fa-spin text-xl"></i>
+                    </div>
+                    <h4 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-1">Sinkronisasi Data</h4>
+                    <p class="text-xs text-slate-500 mb-5">Memuat data presensi dan master karyawan...</p>
+                    <div class="w-full space-y-2 animate-pulse">
+                        <div class="h-10 bg-slate-200/70 rounded-lg w-full"></div>
+                        <div class="h-10 bg-slate-200/70 rounded-lg w-full"></div>
+                        <div class="h-10 bg-slate-200/70 rounded-lg w-full"></div>
+                    </div>
+                </div>`;
+                return; 
+            }
+
+            // 2. TAMPILAN SAAT DATA SELESAI DIMUAT
+            const todayStr = getLocalDateString();
+            const recordsToUse = typeof cachedRecords !== 'undefined' ? cachedRecords : [];
+            const presentRecords = recordsToUse
+                .filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--")
+                .sort((a, b) => b.checkIn.localeCompare(a.checkIn));
+            const notPresentEmployees = await getNotPresentEmployees();
+
+            let html = `<div class="flex flex-col gap-6">`;
+            
+            // --- TAMPILAN KARYAWAN SUDAH HADIR ---
+            html += `<div>
+                <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-check"></i> Sudah Hadir (${presentRecords.length})
+                </h4>`;
+                
+            if (presentRecords.length > 0) {
+                html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
+                presentRecords.forEach(r => {
+                    html += `
+                    <li class="flex justify-between items-center bg-emerald-50/50 border border-emerald-100 px-3 py-2 rounded-lg text-sm text-emerald-800 transition-all hover:bg-emerald-50">
+                        <span class="font-semibold">${r.employeeName || 'Karyawan'}</span>
+                        <div class="flex gap-2">
+                            <span class="text-xs font-mono bg-emerald-100 px-2 py-1 rounded-md" title="Masuk">In: ${r.checkIn}</span>
+                            ${r.checkOut && r.checkOut !== '--' ? `<span class="text-xs font-mono bg-rose-100 text-rose-700 px-2 py-1 rounded-md" title="Keluar">Out: ${r.checkOut}</span>` : ''}
+                        </div>
+                    </li>`;
+                });
+                html += `</ul>`;
+            } else {
+                html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-lg border border-slate-100 text-center">Belum ada presensi masuk hari ini.</p>`;
+            }
+            html += `</div>`;
+
+            html += `<hr class="border-slate-100">`;
+
+            // --- TAMPILAN KARYAWAN BELUM HADIR ---
+            html += `<div>
+                <h4 class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-clock"></i> Belum Hadir (${notPresentEmployees.length})
+                </h4>`;
+                
+            if (notPresentEmployees.length > 0) {
+                html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
+                notPresentEmployees.forEach(emp => {
+                    html += `
+                    <li class="flex justify-between items-center bg-slate-50 border border-slate-100 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-all">
+                        <span class="font-semibold">${emp.name}</span>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 bg-white px-2 py-1 rounded shadow-sm border border-slate-200">${emp.code}</span>
+                    </li>`;
+                });
+                html += `</ul>`;
+            } else {
+                html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-lg border border-slate-100 text-center">Semua karyawan sudah hadir.</p>`;
+            }
+            html += `</div>`; 
+            html += `</div>`; 
+
+            summaryContainer.innerHTML = html;
         }
-        
-    } catch (err) { 
-        console.error(err); 
-        showToast("Sinkronisasi Gagal", "Gagal memperbarui data dari cloud.", "error");
-    }
-}
-   
-   
-        function exportDataToCSV() {
-            if (cachedRecords.length === 0) {
-                showToast("Gagal Ekspor", "Tidak ada data yang dapat diekspor saat ini.", "warning");
+
+        async function refreshDashboardData() {
+            try {
+                updateLiveAttendanceSummary(true); // Tampilkan status loading
+
+                // Ambil data terbaru
+                const rawData = await apiService.fetchAllRecords();
+                
+                // Format data
+                cachedRecords = rawData.map(r => ({ 
+                    ...r,
+                    date: formatDate(r.date),
+                    checkIn: cleanTime(r.checkIn),
+                    checkOut: cleanTime(r.checkOut)
+                }));
+                
+                // Update ringkasan realtime
+                await updateLiveAttendanceSummary(false);
+            } catch (err) { 
+                console.error(err); 
+                showToast("Sinkronisasi Gagal", "Gagal memperbarui data dari cloud.", "error");
+                await updateLiveAttendanceSummary(false); // Hilangkan loading jika error
+            }
+        }
+
+        // Handler saat mengetik kode karyawan
+        let typingTimer;
+        document.getElementById('employee-code-input').addEventListener('input', (e) => {
+            clearTimeout(typingTimer);
+            const code = e.target.value.toUpperCase();
+            const btnCheckOut = document.getElementById('btn-check-out');
+            const resolveText = document.getElementById('employee-resolved-name');
+            
+            // Reset jika kode dihapus
+            if (code.length === 0) {
+                resolveText.textContent = "Silakan masukkan 6 digit kode Anda...";
+                resolveText.className = "mt-3 text-sm text-slate-500 font-medium";
+                btnCheckOut.disabled = true;
                 return;
             }
 
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "ID,Tanggal,Kode Karyawan,Nama Karyawan,Waktu Masuk,Waktu Keluar,Durasi Kerja,Keterangan\n";
-
-            cachedRecords.forEach(r => {
-                const row = [
-                    r.id,
-                    r.date,
-                    `"${r.employeeCode}"`,
-                    `"${r.employeeName}"`,
-                    r.checkIn || "--",
-                    r.checkOut || "--",
-                    r.duration || "--",
-                    `"${r.notes || ''}"`
-                ].join(",");
-                csvContent += row + "\n";
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const downloadLink = document.createElement("a");
-            downloadLink.setAttribute("href", encodedUri);
-            downloadLink.setAttribute("download", `Rekap_Absensi_Karyawan_${getLocalDateString()}.csv`);
-            document.body.appendChild(downloadLink);
-            
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-
-            showToast("Ekspor Berhasil", "File Rekap Absensi (CSV) telah diunduh.", "success");
-        }
-
-        // System-wide Toast Notification Utility
-        function showToast(title, message, type = "success") {
-            const container = document.getElementById('toast-container');
-            
-            let bgClass = "bg-white border-l-4 border-emerald-500 text-slate-800";
-            let iconMarkup = '<i class="fa-solid fa-circle-check text-emerald-500 text-lg"></i>';
-
-            if (type === "warning") {
-                bgClass = "bg-white border-l-4 border-amber-500 text-slate-800";
-                iconMarkup = '<i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg"></i>';
-            } else if (type === "error") {
-                bgClass = "bg-white border-l-4 border-rose-500 text-slate-800";
-                iconMarkup = '<i class="fa-solid fa-circle-xmark text-rose-500 text-lg"></i>';
-            } else if (type === "info") {
-                bgClass = "bg-white border-l-4 border-indigo-500 text-slate-800";
-                iconMarkup = '<i class="fa-solid fa-circle-info text-indigo-500 text-lg"></i>';
+            if (code.length < 6) {
+                resolveText.textContent = "Mencari data...";
+                btnCheckOut.disabled = true;
+                return;
             }
 
-            const toast = document.createElement('div');
-            toast.className = `flex items-start space-x-3 p-4 rounded-xl shadow-xl border border-slate-100 max-w-sm pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300 ${bgClass}`;
-            
-            toast.innerHTML = `
-                <div class="shrink-0">${iconMarkup}</div>
-                <div class="flex-grow">
-                    <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider">${title}</h4>
-                    <p class="text-xs text-slate-500 mt-1">${message}</p>
-                </div>
-                <button class="text-slate-300 hover:text-slate-500 shrink-0 transition" onclick="this.parentElement.remove()">
-                    <i class="fa-solid fa-xmark text-sm"></i>
-                </button>
-            `;
+            // Validasi ketika panjang kode sudah sesuai (misal: 6 karakter)
+            typingTimer = setTimeout(async () => {
+                e.target.disabled = true; // Disable sementara agar tidak double request
+                const res = await apiService.verifyEmployee(code);
+                e.target.disabled = false;
+                e.target.focus();
 
-            container.appendChild(toast);
-
-            setTimeout(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            }, 10);
-
-            setTimeout(() => {
-                toast.classList.add('translate-y-2', 'opacity-0');
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
-            }, 4000);
-        }
-
-   
-
-
-
-
-
-
-
-
-        
-        /**
- * ==========================================
- * FUNGSI UTILITY PEMROSESAN DATA (BARU)
- * ==========================================
- */
-function cleanTime(timeStr) {
-    if (!timeStr || timeStr === "--") return "--";
-    const match = timeStr.match(/(\d{2}):(\d{2}):(\d{2})/);
-    if (match) return `${match[1]}:${match[2]}:${match[3]}`;
-    return timeStr;
-}
-
-function calculateDuration(checkIn, checkOut) {
-    if (!checkIn || !checkOut || checkIn === "--" || checkOut === "--") return "--";
-    
-    const partsIn = checkIn.split(':');
-    const partsOut = checkOut.split(':');
-    
-    if (partsIn.length !== 3 || partsOut.length !== 3) return "--";
-
-    const date1 = new Date(0, 0, 0, parseInt(partsIn[0]), parseInt(partsIn[1]), parseInt(partsIn[2]));
-    const date2 = new Date(0, 0, 0, parseInt(partsOut[0]), parseInt(partsOut[1]), parseInt(partsOut[2]));
-    
-    let diff = (date2 - date1) / 1000;
-    if (diff < 0) return "--";
-    
-    const h = Math.floor(diff / 3600);
-    const m = Math.floor((diff % 3600) / 60);
-    return `${h} jam ${m} mnt`;
-}
-
-        function formatDate(dateStr) {
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return dateStr;
-            // Ambil komponen tanggal secara lokal agar tidak terpengaruh offset UTC
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-        
-
-
-function calculateAdminStats() {
-    const todayStr = getLocalDateString();
-    const todayRecords = cachedRecords.filter(r => r.date === todayStr);
-
-    document.getElementById('stat-total-present').textContent = todayRecords.length;
-    document.getElementById('stat-active-working').textContent = todayRecords.filter(r => r.checkIn !== "--" && r.checkOut === "--").length;
-    document.getElementById('stat-completed-working').textContent = todayRecords.filter(r => r.checkIn !== "--" && r.checkOut !== "--").length;
-    // Anda bisa menambahkan logika rata-rata durasi kembali jika diperlukan
-}
-
-function renderAdminTable() {
-    const tableBody = document.getElementById('attendance-table-body');
-    // Pastikan filter-date dan filter-name ada di HTML Anda
-    const dateFilter = document.getElementById('filter-date').value;
-    const keyword = document.getElementById('filter-name').value.toLowerCase();
-    
-    // Melakukan filtering
-    const filtered = cachedRecords.filter(r => 
-        (dateFilter === "" || r.date === dateFilter) &&
-        (r.employeeName.toLowerCase().includes(keyword) || (r.employeeCode && r.employeeCode.toLowerCase().includes(keyword)))
-    );
-
-    // Render ke tabel
-    tableBody.innerHTML = filtered.map(r => `
-        <tr class="hover:bg-slate-50 border-b border-slate-100">
-            <td class="py-4 px-6 text-sm text-slate-600">${r.date}</td>
-            <td class="py-4 px-6 text-sm font-bold text-indigo-700">${r.employeeCode || '-'}</td>
-            <td class="py-4 px-6 text-sm font-bold text-slate-800">${r.employeeName}</td>
-            <td class="py-4 px-6 text-sm text-center font-mono">${r.checkIn}</td>
-            <td class="py-4 px-6 text-sm text-center font-mono">${r.checkOut}</td>
-            <td class="py-4 px-6 text-sm text-center font-semibold text-indigo-600">${calculateDuration(r.checkIn, r.checkOut)}</td>
-        </tr>
-    `).join('');
-}
-
-        
-
-        async function getNotPresentEmployees() {
-    const todayStr = getLocalDateString();
-    // Gunakan cachedRecords yang sudah ada dari fetchAllRecords
-    const presentCodes = cachedRecords
-        .filter(r => r.date === todayStr && r.checkIn !== "--")
-        .map(r => r.employeeCode);
-
-    // Bandingkan master list dengan yang sudah absen
-    return masterEmployeeList.filter(emp => !presentCodes.includes(emp.code));
-}
-
-        async function sendTelegramMessage(message) {
-    const BOT_TOKEN = "8863289019:AAGy7A9x9AV3HD7Kh2Xbzv-O3JZSlNERtZo";
-    const CHAT_ID = "-1004473111299";
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-
-    try {
-        await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: CHAT_ID,
-                text: message,
-                parse_mode: 'HTML'
-            })
+                if (res.success) {
+                    resolveText.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> Karyawan Dikenali: ${res.user.name}</span>`;
+                    
+                    if (!res.record) {
+                        // Belum Absen Masuk -> Langsung Absen Masuk Otomatis
+                        const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+                        await apiService.createRecord(res.user.code, res.user.name, time);
+                        
+                        showToast("Berhasil Masuk!", `Selamat bekerja, ${res.user.name}. Waktu: ${time}`, "success");
+                        e.target.value = ""; // Kosongkan input
+                        setTimeout(() => resolveText.textContent = "Silakan masukkan 6 digit kode Anda...", 2000);
+                        refreshDashboardData(); // Refresh UI
+                    } else if (!res.record.checkOut || res.record.checkOut === '--') {
+                        // Sudah Absen Masuk -> Siap untuk Absen Keluar
+                        btnCheckOut.disabled = false;
+                        btnCheckOut.dataset.code = code; // Simpan kode ke tombol
+                        showToast("Informasi", "Anda sudah absen masuk. Silakan klik tombol 'Absen Keluar' jika ingin pulang.", "info");
+                    } else {
+                        // Sudah absen lengkap
+                        showToast("Perhatian", "Anda sudah menyelesaikan absensi hari ini (Masuk & Keluar).", "error");
+                        e.target.value = ""; // Kosongkan input
+                    }
+                } else {
+                    resolveText.innerHTML = `<span class="text-rose-500 font-bold"><i class="fa-solid fa-circle-xmark"></i> Kode Karyawan Tidak Valid</span>`;
+                    showToast("Gagal", "Kode tidak terdaftar di sistem.", "error");
+                }
+            }, 500); // Jeda setengah detik setelah selesai ngetik 6 digit
         });
-    } catch (err) {
-        console.error("Gagal kirim Telegram:", err);
-    }
-}
 
+        // Handler klik tombol Absen Keluar
+        document.getElementById('btn-check-out').onclick = async function() {
+            const code = this.dataset.code;
+            if (!code) return;
+            
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
+            btn.disabled = true;
 
- 
+            const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+            await apiService.checkOut(code, time);
+            
+            showToast("Berhasil Keluar!", `Terima kasih atas kerja keras Anda hari ini. Waktu: ${time}`, "success");
+            
+            document.getElementById('employee-code-input').value = "";
+            document.getElementById('employee-resolved-name').textContent = "Silakan masukkan 6 digit kode Anda...";
+            document.getElementById('employee-resolved-name').className = "mt-3 text-sm text-slate-500 font-medium";
+            
+            btn.innerHTML = originalText;
+            
+            refreshDashboardData();
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initClock(); // Jalankan jam 
+            refreshDashboardData(); // Sinkronisasi data awal
+        });
     </script>
 </body>
 </html>
