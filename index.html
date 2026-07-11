@@ -903,107 +903,108 @@ function showButtonLoading(buttonEl, isLoading) {
     }, 100);
 }
 
-     async function updateLiveAttendanceSummary(isLoadingSheet = false) {
+    async function updateLiveAttendanceSummary(isLoadingSheet = false) {
     const summaryContainer = document.getElementById('daily-attendance-summary');
     if (!summaryContainer) return;
     
     // Tampilkan container
     summaryContainer.classList.remove('hidden');
 
+    // ==========================================
+    // 1. TAMPILAN SAAT LOADING (PERTAMA DIBUKA)
+    // ==========================================
+    if (isLoadingSheet) {
+        summaryContainer.innerHTML = `
+        <div class="flex flex-col gap-6">
+            <!-- Skeleton Sudah Hadir -->
+            <div>
+                <h4 class="text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Memuat Data Presensi...
+                </h4>
+                <div class="space-y-2 animate-pulse mt-2">
+                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+                </div>
+            </div>
+            
+            <hr class="border-slate-100">
+            
+            <!-- Skeleton Belum Hadir -->
+            <div>
+                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-spinner fa-spin text-indigo-500"></i> Memuat Data Master...
+                </h4>
+                <div class="space-y-2 animate-pulse mt-2">
+                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+                    <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+                </div>
+            </div>
+        </div>`;
+        return; // Hentikan fungsi di sini jika sedang loading
+    }
+
+    // ==========================================
+    // 2. TAMPILAN SAAT DATA SELESAI DIMUAT
+    // ==========================================
     const todayStr = getLocalDateString();
     
-    // 1. Ambil data yang sudah absen dari cache/variabel lokal saat ini
+    // Ambil data karyawan
     const recordsToUse = typeof cachedRecords !== 'undefined' ? cachedRecords : [];
     const presentRecords = recordsToUse.filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--");
+    const notPresentEmployees = await getNotPresentEmployees();
 
     let html = `<div class="flex flex-col gap-6">`;
     
-    // ==========================================
-    // ATAS: KARYAWAN SUDAH HADIR
-    // ==========================================
-    html += `<div>`;
-
-    // Tambahkan kondisi loading di sini
-    if (isLoadingSheet) {
-        html += `
-        <h4 class="text-xs font-bold text-emerald-600/70 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <i class="fa-solid fa-spinner fa-spin"></i> Memuat Data Presensi...
-        </h4>
-        <div class="space-y-2 animate-pulse mt-2">
-            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-        </div>`;
-    } else {
-        html += `
+    // --- TAMPILAN KARYAWAN SUDAH HADIR ---
+    html += `<div>
         <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <i class="fa-solid fa-user-check"></i> Sudah Hadir (${presentRecords.length})
         </h4>`;
-            
-        if (presentRecords.length > 0) {
-            html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
-            presentRecords.forEach(r => {
-                html += `
-                <li class="flex justify-between items-center bg-emerald-50/50 border border-emerald-100 px-3 py-2 rounded-lg text-sm text-emerald-800">
-                    <span class="font-semibold">${r.employeeName || 'Karyawan'}</span>
-                    <span class="text-xs font-mono bg-emerald-100 px-2 py-1 rounded-md">${r.checkIn}</span>
-                </li>`;
-            });
-            html += `</ul>`;
-        } else {
-            html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada presensi masuk hari ini.</p>`;
-        }
+        
+    if (presentRecords.length > 0) {
+        html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
+        presentRecords.forEach(r => {
+            html += `
+            <li class="flex justify-between items-center bg-emerald-50/50 border border-emerald-100 px-3 py-2 rounded-lg text-sm text-emerald-800">
+                <span class="font-semibold">${r.employeeName || 'Karyawan'}</span>
+                <span class="text-xs font-mono bg-emerald-100 px-2 py-1 rounded-md">${r.checkIn}</span>
+            </li>`;
+        });
+        html += `</ul>`;
+    } else {
+        html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada presensi masuk hari ini.</p>`;
     }
-    
     html += `</div>`;
 
-    // Tambahkan garis pemisah opsional jika diinginkan
     html += `<hr class="border-slate-100">`;
 
-    // ==========================================
-    // BAWAH: KARYAWAN BELUM HADIR
-    // ==========================================
-    html += `<div>`;
-    
-    if (isLoadingSheet) {
-        // Tampilkan Efek Loading (Kode Asli)
-        html += `
-        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <i class="fa-solid fa-spinner fa-spin text-indigo-500"></i> Memuat Data Master...
-        </h4>
-        <div class="space-y-2 animate-pulse mt-2">
-            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
-        </div>`;
-    } else {
-        const notPresentEmployees = await getNotPresentEmployees();
-        
-        html += `
+    // --- TAMPILAN KARYAWAN BELUM HADIR ---
+    html += `<div>
         <h4 class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <i class="fa-solid fa-user-clock"></i> Belum Hadir (${notPresentEmployees.length})
         </h4>`;
         
-        if (notPresentEmployees.length > 0) {
-            html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
-            notPresentEmployees.forEach(emp => {
-                html += `
-                <li class="flex justify-between items-center bg-slate-50 border border-slate-100 px-3 py-2 rounded-lg text-sm text-slate-600">
-                    <span class="font-semibold">${emp.name}</span>
-                    <span class="text-[10px] uppercase font-bold text-slate-400">${emp.code}</span>
-                </li>`;
-            });
-            html += `</ul>`;
-        } else {
-            html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Semua karyawan sudah hadir.</p>`;
-        }
+    if (notPresentEmployees.length > 0) {
+        html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
+        notPresentEmployees.forEach(emp => {
+            html += `
+            <li class="flex justify-between items-center bg-slate-50 border border-slate-100 px-3 py-2 rounded-lg text-sm text-slate-600">
+                <span class="font-semibold">${emp.name}</span>
+                <span class="text-[10px] uppercase font-bold text-slate-400">${emp.code}</span>
+            </li>`;
+        });
+        html += `</ul>`;
+    } else {
+        html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Semua karyawan sudah hadir.</p>`;
     }
-    
     html += `</div>`; 
+
     html += `</div>`; 
 
     summaryContainer.innerHTML = html;
 }
-
+        
         function setupAdminDashboard() {
             const filterDateInput = document.getElementById('filter-date');
             const filterNameInput = document.getElementById('filter-name');
