@@ -916,10 +916,10 @@ function showButtonLoading(buttonEl, isLoading) {
     const recordsToUse = typeof cachedRecords !== 'undefined' ? cachedRecords : [];
     const presentRecords = recordsToUse.filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--");
 
-    let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+   let html = `<div class="flex flex-col gap-6">`;
     
     // ==========================================
-    // KIRI: KARYAWAN SUDAH HADIR (Tampil Langsung)
+    // ATAS: KARYAWAN SUDAH HADIR
     // ==========================================
     html += `<div>
         <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -941,13 +941,16 @@ function showButtonLoading(buttonEl, isLoading) {
     }
     html += `</div>`;
 
+    // Tambahkan garis pemisah opsional jika diinginkan
+    html += `<hr class="border-slate-100">`;
+
     // ==========================================
-    // KANAN: KARYAWAN BELUM HADIR (Efek Loading / Data Asli)
+    // BAWAH: KARYAWAN BELUM HADIR
     // ==========================================
     html += `<div>`;
     
     if (isLoadingSheet) {
-        // Tampilkan Efek Loading (Skeleton Tailwind) selagi memanggil Sheet
+        // Tampilkan Efek Loading
         html += `
         <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <i class="fa-solid fa-spinner fa-spin text-indigo-500"></i> Memuat Data Master...
@@ -958,7 +961,6 @@ function showButtonLoading(buttonEl, isLoading) {
             <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
         </div>`;
     } else {
-        // Jika data Sheet sudah masuk, bandingkan master list
         const notPresentEmployees = await getNotPresentEmployees();
         
         html += `
