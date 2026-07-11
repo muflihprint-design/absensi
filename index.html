@@ -749,36 +749,55 @@ codeInput.disabled = true;
         }
 
 async function performAutoCheckIn() {
-   
+    const now = new Date();
+    const checkInTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    
+    // 1. Buat Objek Data Sementara (Optimistic)
+    const tempRecord = {
+        date: getLocalDateString(), // Pastikan fungsi ini tersedia
+        employeeCode: activeResolvedEmployee.code,
+        employeeName: activeResolvedEmployee.name,
+        checkIn: checkInTime,
+        checkOut: "--",
+        notes: "Absen Otomatis"
+    };
+
+    // 2. Tampilkan di UI segera
+    cachedRecords.push(tempRecord);
+    renderAdminTable();
+    showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
+
+    // 3. Proses di Latar Belakang (Background Sync)
     try {
-        const now = new Date();
-        const checkInTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-        
-        const result = await apiService.createRecord(
+        await apiService.createRecord(
             activeResolvedEmployee.code, 
             activeResolvedEmployee.name, 
             checkInTime, 
             "Absen Otomatis"
         );
-               
-              showToast("Sukses Presensi", `Selamat bekerja ${activeResolvedEmployee.name}!`, "success");
-          await refreshDashboardData();
+
+        // Sinkronisasi data asli dari server
+        await refreshDashboardData();
+        renderAdminTable();
+
+        // Notifikasi Telegram
         const notPresent = await getNotPresentEmployees();
-    
-    let msg = `<b>🔔 Absen Masuk</b>\n${activeResolvedEmployee.name} telah hadir.\n\n`;
-    if (notPresent.length > 0) {
-        msg += `<b>Belum Absen:</b>\n`;
-        notPresent.forEach(emp => { msg += `• ${emp.name}\n`; });
-    }
-    
-    await sendTelegramMessage(msg);
-      
-   
+        let msg = `<b>🔔 Absen Masuk</b>\n${activeResolvedEmployee.name} telah hadir.\n\n`;
+        if (notPresent.length > 0) {
+            msg += `<b>Belum Absen:</b>\n`;
+            notPresent.forEach(emp => { msg += `• ${emp.name}\n`; });
+        }
+        await sendTelegramMessage(msg);
+
     } catch (error) {
-        showToast("Gagal Tersimpan", "Gagal mengirim data ke server.", "error");
-    } 
-   
+        // 4. Rollback jika gagal
+        console.error("Gagal menyimpan ke server:", error);
+        cachedRecords = cachedRecords.filter(r => r !== tempRecord); // Hapus record sementara
+        renderAdminTable(); // Update tabel kembali
+        showToast("Gagal Tersimpan", "Gagal mengirim data ke server. Data dihapus dari tampilan.", "error");
+    }
 }
+        
         
         function resetVerificationUI(placeholderMsg) {
             activeResolvedEmployee = null;
