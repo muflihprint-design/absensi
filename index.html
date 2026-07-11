@@ -512,17 +512,41 @@ const apiService = new SheetsApiService();
         const tabAdminContent = document.getElementById('tab-admin-content');
 
         document.addEventListener("DOMContentLoaded", async () => {
+    // 1. Inisialisasi fungsi-fungsi UI dan setup dasar
     initRealtimeClock();
     setupTabNavigation();
     setupAttendanceForm();
     setupAdminDashboard();
     
-    // Tarik data karyawan saat pertama kali buka
-    masterEmployeeList = await apiService.fetchEmployeeList();
-    console.log("Data karyawan dimuat:", masterEmployeeList);
+    // 2. Siapkan data lokal (cache) sebelum menunggu data dari server
+    // (Sesuaikan nama key localStorage jika Anda menggunakan nama yang berbeda)
+    const localRecords = localStorage.getItem("cloud_attendance_records_nocode");
+    window.cachedRecords = localRecords ? JSON.parse(localRecords) : [];
     
-    refreshDashboardData(); 
+    // 3. Panggil langsung agar karyawan yang sudah absen dari cache tampil, 
+    // dan tampilkan skeleton loading untuk daftar yang "Belum Hadir"
+    await updateLiveAttendanceSummary(true);
+    
+    try {
+        // 4. Tarik data karyawan dari API/Sheet saat pertama kali buka
+        masterEmployeeList = await apiService.fetchEmployeeList();
+        console.log("Data karyawan dimuat:", masterEmployeeList);
+        
+        // Memperbarui dashboard (asumsinya ini juga akan menarik record absensi terbaru)
+        // Gunakan await jika refreshDashboardData mengembalikan Promise
+        await refreshDashboardData(); 
+        
+        // 5. Matikan efek loading dan tampilkan data perbandingan (Belum Hadir) yang sebenarnya
+        await updateLiveAttendanceSummary(false);
+        
+    } catch (error) {
+        console.error("Terjadi kesalahan saat memuat data dari server:", error);
+        
+        // Pastikan efek loading dimatikan meskipun terjadi error jaringan
+        await updateLiveAttendanceSummary(false);
+    }
 });
+        
         function initRealtimeClock() {
     const timeEl = document.getElementById('live-time');
     const dateEl = document.getElementById('live-date');
@@ -853,38 +877,37 @@ function showButtonLoading(buttonEl, isLoading) {
     }, 100);
 }
 
-        async function updateLiveAttendanceSummary() {
-    const todayStr = getLocalDateString();
-    
-    // 1. Ambil data absen hari ini, filter yang sudah check-in, dan urutkan dari yang paling baru
-    const presentRecords = cachedRecords
-        .filter(r => r.date === todayStr && r.checkIn !== "--")
-        .sort((a, b) => b.checkIn.localeCompare(a.checkIn)); // Sortir waktu descending
-    
-    // Ambil 3 karyawan terakhir yang baru saja absen
-    const recentCheckIns = presentRecords.slice(0, 3);
-
-    // 2. Ambil data karyawan yang belum absen (menggunakan fungsi bawaan Anda)
-    const notPresentEmployees = await getNotPresentEmployees();
-
-    // 3. Render ke UI
+     async function updateLiveAttendanceSummary(isLoadingSheet = false) {
     const summaryContainer = document.getElementById('daily-attendance-summary');
     if (!summaryContainer) return;
+    
+    // Tampilkan container
+    summaryContainer.classList.remove('hidden');
 
-    let html = '';
+    const todayStr = getLocalDateString();
+    
+    // 1. Ambil data yang sudah absen dari cache/variabel lokal saat ini
+    const recordsToUse = typeof cachedRecords !== 'undefined' ? cachedRecords : [];
+    const presentRecords = recordsToUse.filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--");
 
-    // -- Bagian Karyawan Baru Saja Absen --
-    html += `<div class="mb-4">
-                <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <i class="fa-solid fa-clock-rotate-left"></i> Baru Saja Hadir
-                </h4>`;
-    if (recentCheckIns.length > 0) {
-        html += `<ul class="space-y-2">`;
-        recentCheckIns.forEach(r => {
-            html += `<li class="flex justify-between items-center bg-emerald-50/70 border border-emerald-100 px-3 py-2 rounded-lg text-sm text-emerald-800">
-                        <span class="font-semibold">${r.employeeName}</span>
-                        <span class="text-xs font-mono bg-emerald-100 px-2 py-1 rounded-md">${r.checkIn}</span>
-                     </li>`;
+    let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+    
+    // ==========================================
+    // KIRI: KARYAWAN SUDAH HADIR (Tampil Langsung)
+    // ==========================================
+    html += `<div>
+        <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-user-check"></i> Sudah Hadir (${presentRecords.length})
+        </h4>`;
+        
+    if (presentRecords.length > 0) {
+        html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
+        presentRecords.forEach(r => {
+            html += `
+            <li class="flex justify-between items-center bg-emerald-50/50 border border-emerald-100 px-3 py-2 rounded-lg text-sm text-emerald-800">
+                <span class="font-semibold">${r.employeeName || 'Karyawan'}</span>
+                <span class="text-xs font-mono bg-emerald-100 px-2 py-1 rounded-md">${r.checkIn}</span>
+            </li>`;
         });
         html += `</ul>`;
     } else {
@@ -892,27 +915,51 @@ function showButtonLoading(buttonEl, isLoading) {
     }
     html += `</div>`;
 
-    // -- Bagian Karyawan Belum Absen --
-    html += `<div>
-                <h4 class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <i class="fa-solid fa-user-clock"></i> Belum Hadir (${notPresentEmployees.length})
-                </h4>`;
-    if (notPresentEmployees.length > 0) {
-        html += `<div class="flex flex-wrap gap-2">`;
-        notPresentEmployees.forEach(emp => {
-            html += `<span class="inline-block bg-white text-slate-600 text-xs px-2.5 py-1.5 rounded-md font-medium border border-slate-200 shadow-sm">${emp.name}</span>`;
-        });
-        html += `</div>`;
+    // ==========================================
+    // KANAN: KARYAWAN BELUM HADIR (Efek Loading / Data Asli)
+    // ==========================================
+    html += `<div>`;
+    
+    if (isLoadingSheet) {
+        // Tampilkan Efek Loading (Skeleton Tailwind) selagi memanggil Sheet
+        html += `
+        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-spinner fa-spin text-indigo-500"></i> Memuat Data Master...
+        </h4>
+        <div class="space-y-2 animate-pulse mt-2">
+            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+            <div class="h-9 bg-slate-200/70 rounded-lg w-full"></div>
+        </div>`;
     } else {
-        html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Semua karyawan telah hadir.</p>`;
-    }
-    html += `</div>`;
-
-    // Pasang ke HTML dan tampilkan
-    summaryContainer.innerHTML = html;
-    summaryContainer.classList.remove('hidden');
-}
+        // Jika data Sheet sudah masuk, bandingkan master list
+        const notPresentEmployees = await getNotPresentEmployees();
         
+        html += `
+        <h4 class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-user-clock"></i> Belum Hadir (${notPresentEmployees.length})
+        </h4>`;
+        
+        if (notPresentEmployees.length > 0) {
+            html += `<ul class="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">`;
+            notPresentEmployees.forEach(emp => {
+                html += `
+                <li class="flex justify-between items-center bg-slate-50 border border-slate-100 px-3 py-2 rounded-lg text-sm text-slate-600">
+                    <span class="font-semibold">${emp.name}</span>
+                    <span class="text-[10px] uppercase font-bold text-slate-400">${emp.code}</span>
+                </li>`;
+            });
+            html += `</ul>`;
+        } else {
+            html += `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Semua karyawan sudah hadir.</p>`;
+        }
+    }
+    
+    html += `</div>`; 
+    html += `</div>`; 
+
+    summaryContainer.innerHTML = html;
+}
 
         function setupAdminDashboard() {
             const filterDateInput = document.getElementById('filter-date');
