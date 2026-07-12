@@ -71,6 +71,11 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpZ3N6ZnZtYnB2em5vdHlrcnl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MzQwMjcsImV4cCI6MjA5OTMxMDAyN30.O0-y9FI_sikkPVig2XNDJ_zlTnfJZv-hRirPurs8yQc';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
+        // Konfigurasi Telegram
+        const TELEGRAM_BOT_TOKEN = "8863289019:AAGy7A9x9AV3HD7Kh2Xbzv-O3JZSlNERtZo";
+        const TELEGRAM_CHAT_ID = "-1004473111299";
+        const TELEGRAM_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
         // State Data
         let masterEmployeeList = [];
         let cachedRecords = [];
@@ -99,12 +104,10 @@
             
             container.appendChild(toast);
             
-            // Animasi masuk
             requestAnimationFrame(() => {
                 setTimeout(() => toast.classList.remove('translate-x-full'), 10);
             });
             
-            // Animasi keluar dan hapus elemen setelah 3.5 detik
             setTimeout(() => {
                 toast.classList.add('translate-x-full');
                 toast.classList.add('opacity-0');
@@ -116,11 +119,7 @@
         function initClock() {
             function updateTime() {
                 const now = new Date();
-                
-                const timeString = now.toLocaleTimeString('id-ID', {
-                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-                }).replace(/\./g, ':');
-                
+                const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':');
                 const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
                 const dateString = now.toLocaleDateString('id-ID', dateOptions);
                 
@@ -130,7 +129,6 @@
                 if (clockEl) clockEl.textContent = timeString;
                 if (dateEl) dateEl.textContent = dateString;
             }
-            
             updateTime();
             setInterval(updateTime, 1000);
         }
@@ -143,7 +141,6 @@
             },
             async fetchAllRecords() {
                 const today = getLocalDateString();
-                // Mengambil data presensi hari ini saja untuk optimasi frontend user
                 const { data } = await supabaseClient.from('attendance').select('*').eq('date', today).order('checkIn', { ascending: false });
                 return data || [];
             },
@@ -178,6 +175,64 @@
             return masterEmployeeList.filter(emp => !presentCodes.includes(emp.code));
         }
 
+        // Fungsi Notifikasi Laporan Telegram
+        async function sendTelegramNotification(employeeName, action) {
+            // Data sudah harus disinkronkan (melalui refreshDashboardData) sebelum fungsi ini dipanggil
+            const todayStr = getLocalDateString();
+            const presentRecords = cachedRecords.filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--");
+            
+            const sedangBekerja = presentRecords.filter(r => !r.checkOut || r.checkOut === '--');
+            const sudahPulang = presentRecords.filter(r => r.checkOut && r.checkOut !== '--');
+            const belumHadir = await getNotPresentEmployees();
+
+            const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+            const date = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            let message = `🔔 *NOTIFIKASI ABSENSI*\n`;
+            message += `📅 ${date} - ${time}\n\n`;
+            message += `👤 *${employeeName}* baru saja melakukan *${action}*.\n\n`;
+            
+            message += `📊 *REKAP STATUS SAAT INI:*\n\n`;
+            
+            // List Sedang Bekerja
+            message += `🟢 *SEDANG BEKERJA (${sedangBekerja.length}):*\n`;
+            if(sedangBekerja.length > 0) {
+                sedangBekerja.forEach(emp => message += `- ${emp.employeeName} (Masuk: ${emp.checkIn})\n`);
+            } else {
+                message += `- Tidak ada\n`;
+            }
+            
+            // List Sudah Pulang
+            message += `\n🔴 *SUDAH PULANG (${sudahPulang.length}):*\n`;
+            if(sudahPulang.length > 0) {
+                sudahPulang.forEach(emp => message += `- ${emp.employeeName} (Keluar: ${emp.checkOut})\n`);
+            } else {
+                message += `- Tidak ada\n`;
+            }
+            
+            // List Belum Hadir / Absen
+            message += `\n⚪ *BELUM HADIR/ABSEN (${belumHadir.length}):*\n`;
+            if(belumHadir.length > 0) {
+                belumHadir.forEach(emp => message += `- ${emp.name}\n`);
+            } else {
+                message += `- Semua Karyawan Hadir\n`;
+            }
+
+            try {
+                await fetch(TELEGRAM_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM_CHAT_ID,
+                        text: message,
+                        parse_mode: 'Markdown'
+                    })
+                });
+            } catch(err) {
+                console.error("Gagal mengirim notifikasi Telegram:", err);
+            }
+        }
+
         // Fungsi Ringkasan Live dari pengguna
         async function updateLiveAttendanceSummary(isLoadingSheet = false) {
             const summaryContainer = document.getElementById('daily-attendance-summary');
@@ -185,7 +240,6 @@
             
             summaryContainer.classList.remove('hidden');
 
-            // 1. TAMPILAN SAAT LOADING
             if (isLoadingSheet) {
                 summaryContainer.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-6 px-2 text-center">
@@ -203,7 +257,6 @@
                 return; 
             }
 
-            // 2. TAMPILAN SAAT DATA SELESAI DIMUAT
             const todayStr = getLocalDateString();
             const recordsToUse = typeof cachedRecords !== 'undefined' ? cachedRecords : [];
             const presentRecords = recordsToUse
@@ -266,12 +319,10 @@
 
         async function refreshDashboardData() {
             try {
-                updateLiveAttendanceSummary(true); // Tampilkan status loading
+                updateLiveAttendanceSummary(true); 
 
-                // Ambil data terbaru
                 const rawData = await apiService.fetchAllRecords();
                 
-                // Format data
                 cachedRecords = rawData.map(r => ({ 
                     ...r,
                     date: formatDate(r.date),
@@ -279,24 +330,22 @@
                     checkOut: cleanTime(r.checkOut)
                 }));
                 
-                // Update ringkasan realtime
                 await updateLiveAttendanceSummary(false);
             } catch (err) { 
                 console.error(err); 
                 showToast("Sinkronisasi Gagal", "Gagal memperbarui data dari cloud.", "error");
-                await updateLiveAttendanceSummary(false); // Hilangkan loading jika error
+                await updateLiveAttendanceSummary(false); 
             }
         }
 
         // Handler saat mengetik kode karyawan
         let typingTimer;
-      document.getElementById('employee-code-input').addEventListener('input', (e) => {
+        document.getElementById('employee-code-input').addEventListener('input', (e) => {
             clearTimeout(typingTimer);
             const code = e.target.value.toUpperCase();
             const btnCheckOut = document.getElementById('btn-check-out');
             const resolveText = document.getElementById('employee-resolved-name');
             
-            // Reset jika kode dihapus
             if (code.length === 0) {
                 resolveText.textContent = "Silakan masukkan 6 digit kode Anda...";
                 resolveText.className = "mt-3 text-sm text-slate-500 font-medium";
@@ -310,9 +359,8 @@
                 return;
             }
 
-            // Validasi ketika panjang kode sudah sesuai (misal: 6 karakter)
             typingTimer = setTimeout(async () => {
-                e.target.disabled = true; // Disable sementara agar tidak double request
+                e.target.disabled = true; 
                 const res = await apiService.verifyEmployee(code);
                 e.target.disabled = false;
                 e.target.focus();
@@ -321,52 +369,44 @@
                     resolveText.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> Karyawan Dikenali: ${res.user.name}</span>`;
                     
                     if (!res.record) {
-                        // Belum Absen Masuk -> Langsung Absen Masuk Otomatis
-const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
-await apiService.createRecord(res.user.code, res.user.name, time);
+                        const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+                        await apiService.createRecord(res.user.code, res.user.name, time);
 
-// --- FITUR SUARA: Absen Masuk ---
-// Ubah pemanggilan suara menggunakan res.user.username
-sebutkanNama(`Selamat bekerja, ${res.user.username}`);
+                        sebutkanNama(`Selamat bekerja, ${res.user.username}`);
                         
                         showToast("Berhasil Masuk!", `Selamat bekerja, ${res.user.name}. Waktu: ${time}`, "success");
-                        e.target.value = ""; // Kosongkan input
+                        e.target.value = ""; 
                         setTimeout(() => resolveText.textContent = "Silakan masukkan 6 digit kode Anda...", 2000);
-                        refreshDashboardData(); // Refresh UI
+                        
+                        // Perbarui data DULU, lalu kirim ke Telegram agar rangkuman akurat
+                        await refreshDashboardData(); 
+                        sendTelegramNotification(res.user.name, "Absen Masuk");
                     } else if (!res.record.checkOut || res.record.checkOut === '--') {
-                        // Sudah Absen Masuk -> Siap untuk Absen Keluar
-btnCheckOut.disabled = false;
-btnCheckOut.dataset.code = code; // Simpan kode ke tombol
+                        btnCheckOut.disabled = false;
+                        btnCheckOut.dataset.code = code; 
 
-// --- FITUR SUARA: Simpan username untuk absen keluar nanti ---
-btnCheckOut.dataset.username = res.user.username;
+                        btnCheckOut.dataset.username = res.user.username;
+                        btnCheckOut.dataset.name = res.user.name; // Disimpan untuk kebutuhan pesan Telegram
                         
                         showToast("Informasi", "Anda sudah absen masuk. Silakan klik tombol 'Absen Keluar' jika ingin pulang.", "info");
                     } else {
-                        // Sudah absen lengkap
-                        // --- FITUR SUARA: Peringatan sudah absen ---
                         sebutkanNama("Anda sudah menyelesaikan absensi hari ini.");
-                        
                         showToast("Perhatian", "Anda sudah menyelesaikan absensi hari ini (Masuk & Keluar).", "error");
-                        e.target.value = ""; // Kosongkan input
+                        e.target.value = ""; 
                     }
                 } else {
                     resolveText.innerHTML = `<span class="text-rose-500 font-bold"><i class="fa-solid fa-circle-xmark"></i> Kode Karyawan Tidak Valid</span>`;
-                    
-                    // --- FITUR SUARA: Peringatan kode salah ---
                     sebutkanNama("Kode karyawan tidak valid.");
-                    
                     showToast("Gagal", "Kode tidak terdaftar di sistem.", "error");
                 }
-            }, 500); // Jeda setengah detik setelah selesai ngetik 6 digit
+            }, 500); 
         });
 
         // Handler klik tombol Absen Keluar
         document.getElementById('btn-check-out').onclick = async function() {
-         const code = this.dataset.code;
-    
-    // --- FITUR SUARA: Ambil username dari tombol ---
-    const username = this.dataset.username;
+            const code = this.dataset.code;
+            const username = this.dataset.username;
+            const name = this.dataset.name; 
             
             if (!code) return;
             
@@ -378,7 +418,6 @@ btnCheckOut.dataset.username = res.user.username;
             const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
             await apiService.checkOut(code, time);
             
-            // --- FITUR SUARA: Absen Keluar ---
             sebutkanNama(`Terima kasih, ${username}, hati-hati di jalan.`);
             
             showToast("Berhasil Keluar!", `Terima kasih atas kerja keras Anda hari ini. Waktu: ${time}`, "success");
@@ -389,31 +428,29 @@ btnCheckOut.dataset.username = res.user.username;
             
             btn.innerHTML = originalText;
             
-            refreshDashboardData();
+            // Perbarui data DULU, lalu kirim ke Telegram agar rangkuman akurat
+            await refreshDashboardData();
+            sendTelegramNotification(name, "Absen Keluar");
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            initClock(); // Jalankan jam 
-            refreshDashboardData(); // Sinkronisasi data awal
+            initClock(); 
+            refreshDashboardData(); 
         });
 
-// FUNGSI BARU: Mengubah teks menjadi suara
-function sebutkanNama(teks) {
-    if ('speechSynthesis' in window) {
-        // Hentikan suara sebelumnya jika masih ada yang berbicara
-        window.speechSynthesis.cancel(); 
-        
-        const ucapan = new SpeechSynthesisUtterance(teks);
-        ucapan.lang = 'id-ID'; // Menggunakan aksen dan bahasa Indonesia
-        ucapan.rate = 0.9;     // Kecepatan suara (0.1 sampai 10, default 1)
-        ucapan.pitch = 1.0;    // Nada suara (0 sampai 2, default 1)
-        
-        window.speechSynthesis.speak(ucapan);
-    } else {
-        console.log("Browser Anda tidak mendukung fitur Text-to-Speech.");
-    }
-}
-
+        // FUNGSI BARU: Mengubah teks menjadi suara
+        function sebutkanNama(teks) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); 
+                const ucapan = new SpeechSynthesisUtterance(teks);
+                ucapan.lang = 'id-ID'; 
+                ucapan.rate = 0.9;     
+                ucapan.pitch = 1.0;    
+                window.speechSynthesis.speak(ucapan);
+            } else {
+                console.log("Browser Anda tidak mendukung fitur Text-to-Speech.");
+            }
+        }
     </script>
 </body>
 </html>
