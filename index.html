@@ -56,7 +56,7 @@
                 <p id="employee-resolved-name" class="mt-3 text-sm text-slate-500 font-medium transition-all duration-300">Silakan masukkan 6 digit kode Anda</p>
                 
                 <button id="btn-check-out" disabled class="mt-5 w-full p-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-person-walking-arrow-right"></i> Absen Keluar
+                    <i class="fa-solid fa-person-walking-arrow-right"></i> Absen Pulang
                 </button>
             </div>
 
@@ -188,14 +188,17 @@
             const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
             const date = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-            let message = `🔔 *NOTIFIKASI ABSENSI*\n`;
+            // Pengaturan Emoji Berdasarkan Tipe Absen
+            const headerEmoji = action === "Absen Masuk" ? "🟢" : "🔴";
+
+            let message = `🔔 *NOTIFIKASI ${action.toUpperCase()}*\n`;
             message += `📅 ${date} - ${time}\n\n`;
-            message += `👤 *${employeeName}* baru saja melakukan *${action}*.\n\n`;
+            message += `${headerEmoji} *${employeeName}* baru saja melakukan *${action}*.\n\n`;
             
-            message += `📊 *REKAP STATUS SAAT INI:*\n\n`;
+            message += `📊 *REKAP STATUS KARYAWAN SAAT INI:*\n\n`;
             
             // List Sedang Bekerja
-            message += `🟢 *SEDANG BEKERJA (${sedangBekerja.length}):*\n`;
+            message += `💼 *SEDANG BEKERJA (${sedangBekerja.length}):*\n`;
             if(sedangBekerja.length > 0) {
                 sedangBekerja.forEach(emp => message += `- ${emp.employeeName} (Masuk: ${emp.checkIn})\n`);
             } else {
@@ -203,7 +206,7 @@
             }
             
             // List Sudah Pulang
-            message += `\n🔴 *SUDAH PULANG (${sudahPulang.length}):*\n`;
+            message += `\n🏠 *SUDAH PULANG (${sudahPulang.length}):*\n`;
             if(sudahPulang.length > 0) {
                 sudahPulang.forEach(emp => message += `- ${emp.employeeName} (Keluar: ${emp.checkOut})\n`);
             } else {
@@ -369,6 +372,7 @@
                     resolveText.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> Karyawan Dikenali: ${res.user.name}</span>`;
                     
                     if (!res.record) {
+                        // KONDISI ABSEN MASUK
                         const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
                         await apiService.createRecord(res.user.code, res.user.name, time);
 
@@ -381,14 +385,16 @@
                         // Perbarui data DULU, lalu kirim ke Telegram agar rangkuman akurat
                         await refreshDashboardData(); 
                         sendTelegramNotification(res.user.name, "Absen Masuk");
+                        
                     } else if (!res.record.checkOut || res.record.checkOut === '--') {
+                        // KONDISI SIAP ABSEN PULANG
                         btnCheckOut.disabled = false;
                         btnCheckOut.dataset.code = code; 
 
                         btnCheckOut.dataset.username = res.user.username;
-                        btnCheckOut.dataset.name = res.user.name; // Disimpan untuk kebutuhan pesan Telegram
+                        btnCheckOut.dataset.name = res.user.name; // Simpan nama untuk ditarik saat klik tombol Pulang
                         
-                        showToast("Informasi", "Anda sudah absen masuk. Silakan klik tombol 'Absen Keluar' jika ingin pulang.", "info");
+                        showToast("Informasi", "Anda sudah absen masuk. Silakan klik tombol 'Absen Pulang' jika ingin mengakhiri shift.", "info");
                     } else {
                         sebutkanNama("Anda sudah menyelesaikan absensi hari ini.");
                         showToast("Perhatian", "Anda sudah menyelesaikan absensi hari ini (Masuk & Keluar).", "error");
@@ -402,11 +408,14 @@
             }, 500); 
         });
 
-        // Handler klik tombol Absen Keluar
+        // Handler klik tombol Absen Pulang
         document.getElementById('btn-check-out').onclick = async function() {
             const code = this.dataset.code;
             const username = this.dataset.username;
-            const name = this.dataset.name; 
+            
+            // Tarik nama Karyawan dari dataset, jika gagal, cari di cachedRecords
+            const fallbackName = cachedRecords.find(r => r.employeeCode === code)?.employeeName || "Karyawan";
+            const name = this.dataset.name || fallbackName;
             
             if (!code) return;
             
@@ -428,9 +437,9 @@
             
             btn.innerHTML = originalText;
             
-            // Perbarui data DULU, lalu kirim ke Telegram agar rangkuman akurat
+            // Perbarui data DULU ke Supabase, kemudian kirim Laporan Absen Pulang ke Telegram
             await refreshDashboardData();
-            sendTelegramNotification(name, "Absen Keluar");
+            sendTelegramNotification(name, "Absen Pulang");
         };
 
         document.addEventListener('DOMContentLoaded', () => {
