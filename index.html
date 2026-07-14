@@ -143,7 +143,8 @@
         const apiService = {
             async fetchAllEmployees() {
                 const { data } = await supabaseClient.from('employees').select('*');
-                return data || [];
+                // HANYA masukkan karyawan yang memiliki isian check_in_target DAN check_out_target
+                return (data || []).filter(emp => emp.check_in_target && emp.check_out_target);
             },
             async fetchAllRecords() {
                 const today = getLocalDateString();
@@ -151,8 +152,15 @@
                 return data || [];
             },
             async verifyEmployee(code) {
-                const { data: user } = await supabaseClient.from('employees').select('*').eq('code', code).single();
-                if (!user) return { success: false };
+                // Menggunakan maybeSingle() lebih aman daripada single() jika data tidak ditemukan
+                const { data: user } = await supabaseClient.from('employees').select('*').eq('code', code).maybeSingle();
+                
+                if (!user) return { success: false, reason: 'not_found' };
+                
+                // TOLAK jika karyawan tidak memiliki jadwal presensi (kolom kosong/null)
+                if (!user.check_in_target || !user.check_out_target) {
+                    return { success: false, reason: 'no_schedule' };
+                }
                 
                 const today = getLocalDateString();
                 const { data: record } = await supabaseClient.from('attendance').select('*').eq('employeeCode', code).eq('date', today).maybeSingle();
@@ -407,9 +415,15 @@
                         e.target.value = ""; 
                     }
                 } else {
-                    resolveText.innerHTML = `<span class="text-rose-500 font-bold"><i class="fa-solid fa-circle-xmark"></i> Kode Karyawan Tidak Valid</span>`;
-                    sebutkanNama("Kode karyawan tidak valid.");
-                    showToast("Gagal", "Kode tidak terdaftar di sistem.", "error");
+                    if (res.reason === 'no_schedule') {
+                        resolveText.innerHTML = `<span class="text-amber-500 font-bold"><i class="fa-solid fa-circle-exclamation"></i> Jadwal Presensi Belum Diatur</span>`;
+                        sebutkanNama("Maaf, jadwal presensi Anda belum diatur di sistem.");
+                        showToast("Akses Ditolak", "Anda tidak diwajibkan absensi atau jadwal belum diatur.", "error");
+                    } else {
+                        resolveText.innerHTML = `<span class="text-rose-500 font-bold"><i class="fa-solid fa-circle-xmark"></i> Kode Karyawan Tidak Valid</span>`;
+                        sebutkanNama("Kode karyawan tidak valid.");
+                        showToast("Gagal", "Kode tidak terdaftar di sistem.", "error");
+                    }
                 }
             }, 500); 
         });
