@@ -1045,16 +1045,16 @@ async function checkLoginState(isAfterLogout = false) {
                 }, 300);
             } else {
                 // JIKA BUKAN PERTAMA KALI (Hari-hari berikutnya): 
-                // Kamera otomatis terbuka seperti biasa (Auto Check-In)
-                if (!isAutoCheckInRunning) {
+            // Kamera otomatis terbuka seperti biasa (Auto Check-In)
+            if (!isAutoCheckInRunning) {
                 isAutoCheckInRunning = true; 
                 setTimeout(() => {
                     // --- TAMBAHAN KODE: Cek izin kamera sebelum klik otomatis ---
                     const videoEl = document.getElementById('camera-stream');
                     if (!videoEl.srcObject || videoEl.srcObject.getVideoTracks().length === 0) {
                         isAutoCheckInRunning = false; // Reset status
-                        showToast("Akses Tertunda", "Tidak dapat membuka kamera. Izinkan kamera terlebih dahulu.", "error");
-                        return; // Hentikan auto-click
+                        // Pesan showToast dihapus dari sini
+                        return; // Hentikan auto-click secara diam-diam
                     }
                     // ------------------------------------------------------------
 
