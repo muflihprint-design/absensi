@@ -1155,7 +1155,7 @@ document.getElementById('btn-submit-login').onclick = async () => {
         // Reset input login
         document.getElementById('login-username').value = '';
         document.getElementById('login-password').value = '';
-        
+        btn.innerHTML = 'Login';
         checkLoginState();
     } else {
         showToast("Login Gagal", "Username atau password salah.", "error");
