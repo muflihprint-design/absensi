@@ -1048,19 +1048,29 @@ async function checkLoginState(isAfterLogout = false) {
             // Kamera otomatis terbuka seperti biasa (Auto Check-In)
             if (!isAutoCheckInRunning) {
                 isAutoCheckInRunning = true; 
-                setTimeout(() => {
-                    // --- TAMBAHAN KODE: Cek izin kamera sebelum klik otomatis ---
+                
+                let checkAttempts = 0;
+                const maxAttempts = 25; // Maksimal menunggu 5 detik (25 x 200ms)
+                
+                const checkCameraInterval = setInterval(() => {
                     const videoEl = document.getElementById('camera-stream');
-                    if (!videoEl.srcObject || videoEl.srcObject.getVideoTracks().length === 0) {
-                        isAutoCheckInRunning = false; // Reset status
-                        // Pesan showToast dihapus dari sini
-                        return; // Hentikan auto-click secara diam-diam
+                    const isCameraReady = videoEl && videoEl.srcObject && videoEl.srcObject.getVideoTracks().length > 0;
+                    
+                    if (isCameraReady) {
+                        // Jika kamera sudah siap, hentikan pengecekan dan langsung klik
+                        clearInterval(checkCameraInterval);
+                        const autoBtn = document.getElementById('btn-auto-check-in');
+                        if (autoBtn) autoBtn.click();
+                    } else {
+                        // Jika belum siap, tambah hitungan percobaan
+                        checkAttempts++;
+                        if (checkAttempts >= maxAttempts) {
+                            // Jika sudah 5 detik kamera tetap tidak siap, batalkan otomatisasi
+                            clearInterval(checkCameraInterval);
+                            isAutoCheckInRunning = false; 
+                        }
                     }
-                    // ------------------------------------------------------------
-
-                    const autoBtn = document.getElementById('btn-auto-check-in');
-                    if (autoBtn) autoBtn.click();
-                }, 500); 
+                }, 200); // Mengecek ulang setiap 200 milidetik
             }
             }
             
