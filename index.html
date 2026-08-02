@@ -882,12 +882,12 @@ const videoElCheck = document.getElementById('camera-stream');
           // --- KODE BARU: Sembunyikan lagi dan kembalikan kondisi tombol ---
             btn.classList.add('hidden'); 
             btn.innerHTML = originalText;
-            btn.disabled = false;
-            
-            await refreshDashboardData();
-            sendTelegramNotification(name, "Absen Pulang", imageBlob);
-            checkLoginState();
-        };
+           btn.disabled = false;
+    
+    await refreshDashboardData();
+    sendTelegramNotification(name, "Absen Pulang", imageBlob);
+    checkLoginState(true); // <--- TAMBAHKAN 'true' DI SINI
+};
 
         document.addEventListener('DOMContentLoaded', () => {
     initClock(); 
