@@ -1,63 +1,240 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#059669">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Mengatur viewport agar menutupi seluruh layar (termasuk area notch/poni HP) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Meta tag khusus untuk pengguna iOS/iPhone -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Sistem Absensi Karyawan - Supabase Cloud</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  <style>
+        /* Memastikan tinggi layar benar-benar pas di perangkat mobile */
+        html, body {
+            height: 100%;
+            height: -webkit-fill-available;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            /* Memberikan jarak aman untuk HP yang memiliki poni (notch) */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+
+        /* Styling Scrollbar & Video */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .mirror-video { transform: scaleX(-1); }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen relative overflow-x-hidden">
+<!-- Modal Login -->
+<div id="login-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+    <div class="bg-white p-6 rounded-2xl w-full max-w-sm mx-4 shadow-2xl transform scale-95 transition-transform duration-300">
+        <h3 class="text-xl font-bold text-slate-800 mb-4 text-center">Login Karyawan</h3>
+        
+        <!-- BAGIAN FORM LOGIN UTAMA -->
+        <div id="login-form-container" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Username</label>
+                <input type="text" id="login-username" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Password</label>
+                <input type="password" id="login-password" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div class="flex gap-2 mt-6">
+                <button id="btn-close-login" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold hover:bg-slate-200">Batal</button>
+                <button id="btn-submit-login" class="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700">Login</button>
+            </div>
+            
+            <!-- Tombol Lupa Password -->
+            <div class="mt-4 text-center">
+                <button id="btn-forgot-password" class="text-xs text-blue-600 hover:text-blue-800 font-semibold underline transition-colors">
+                    Lupa Username / Password?
+                </button>
+            </div>
+        </div>
+
+        <!-- BAGIAN SOLUSI KENDALA (Disembunyikan di awal) -->
+        <div id="forgot-password-help" class="hidden flex-col items-center mt-2 animate-fade-in">
+            <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-3 border-2 border-amber-200">
+                <i class="fa-solid fa-triangle-exclamation text-amber-500 text-xl"></i>
+            </div>
+            <h4 class="font-bold text-slate-800 mb-3 text-center">Solusi Gagal Login</h4>
+            <div class="text-[11px] text-slate-600 mb-4 leading-relaxed text-left bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                Jika Anda tidak dapat login, silakan hubungi Admin untuk meminta reset password.<br><br>
+                <b>Untuk tetap bisa absen HARI INI:</b><br>
+                <ol class="list-decimal pl-4 mt-1 space-y-1">
+                    <li>Hapus (Uninstall) aplikasi ini dari HP Anda.</li>
+                    <li>Buka web absensi melalui browser (Chrome/Safari).</li>
+                    <li>Pada layar wajib instal, klik teks <b>"Saya mengalami kendala instalasi"</b>.</li>
+                    <li>Ketik alasan <i>"Lupa password akun"</i>, lalu lakukan absen dengan mode manual.</li>
+                </ol>
+            </div>
+            <button id="btn-back-to-login" class="w-full py-2.5 bg-slate-100 text-slate-700 rounded-lg font-bold hover:bg-slate-200 transition-colors shadow-sm">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Kembali ke Form Login
+            </button>
+        </div>
+
+    </div>
+</div>   
     
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 w-full max-w-xs pointer-events-none"></div>
 
-    <header class="bg-white border-b border-slate-200 p-4 sticky top-0 z-40 shadow-sm">
-        <div class="max-w-7xl mx-auto flex justify-center items-center">
-            <h1 class="text-2xl font-bold text-emerald-600 flex items-center gap-2">
+  <!-- GANTI BAGIAN <header> MENJADI SEPERTI INI -->
+<header class="bg-white border-b border-slate-200 p-3 sm:p-4 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto flex justify-between items-center px-1 sm:px-2">
+        <!-- Judul Aplikasi -->
+        <h1 class="text-xl sm:text-2xl font-bold text-emerald-600 flex items-center gap-2">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center text-sm sm:text-base">
                 <i class="fa-solid fa-fingerprint"></i>
-                ABSENSI
-            </h1>
-        </div>
-    </header>
+            </div>
+            <span class="tracking-tight">ABSENSI</span>
+        </h1>
+        
+        <!-- Grup Tombol Kanan -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+            <!-- Tombol Instal (Prioritas di Mobile, ikon saja jika sempit) -->
+            <button id="btn-install" class="hidden text-xs sm:text-sm bg-emerald-100 text-emerald-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg font-bold hover:bg-emerald-200 transition-all flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-download"></i> <span class="hidden sm:inline">Instal</span>
+            </button>
 
-    <main class="max-w-5xl mx-auto p-4 sm:p-6 mt-4">
-        <section id="user-content" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <!-- Tombol Login (Muncul jika belum login) -->
+            <button id="btn-login-modal" class="text-xs sm:text-sm bg-blue-100 text-blue-700 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg font-bold hover:bg-blue-200 transition-all shadow-sm">
+                <i class="fa-solid fa-right-to-bracket"></i> <span class="hidden min-[380px]:inline ml-1">Login</span>
+            </button>
+            
+            <!-- Tombol Logout (Muncul jika sudah login) -->
+            <button id="btn-logout" class="hidden text-xs sm:text-sm border border-rose-200 text-rose-600 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg font-bold hover:bg-rose-50 transition-all">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 pb-4 pt-2 sm:px-6 sm:pb-6 md:pt-4 mt-0">
+            <section id="user-content" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             
             <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 text-center relative overflow-hidden">
+                
+                <!-- Overlay Loading Kamera -->
+                <div id="camera-loading" class="absolute inset-0 bg-white/95 backdrop-blur-sm z-30 flex flex-col items-center justify-center transition-opacity duration-300">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-emerald-500 mb-4"></i>
+                    <h3 class="text-lg font-bold text-slate-800">Memeriksa Izin Kamera...</h3>
+                    <p class="text-sm text-slate-500 mt-1">Sistem sedang meminta akses kamera Anda.</p>
+                </div>
+
+                             <!-- Overlay Kamera Ditolak (Memblokir Aplikasi) -->
+<div id="camera-denied" class="absolute inset-0 bg-slate-50/95 backdrop-blur-sm z-30 flex flex-col items-center justify-center hidden">
+    <div class="w-20 h-20 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-5 shadow-sm border border-rose-200">
+        <i class="fa-solid fa-video-slash text-3xl"></i>
+    </div>
+    <h3 class="text-xl font-bold text-slate-800 mb-2">Akses Terkunci</h3>
+    
+    <!-- INI KODE PARAGRAF YANG BARU -->
+    <p class="text-sm text-slate-600 text-center max-w-xs mb-6 leading-relaxed">
+        Aplikasi absensi membutuhkan akses kamera. Silakan klik ikon 🔒 (gembok) di kolom URL browser Anda, pilih <b>Izinkan/Allow</b> pada pengaturan kamera, lalu klik tombol di bawah.
+    </p>
+
+    <!-- INI TOMBOL BARU YANG SUDAH KITA UBAH -->
+    <button onclick="cobaLagiKamera()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-md transition-all active:scale-95 flex items-center gap-2">
+        <i class="fa-solid fa-camera"></i> Izinkan Akses Kamera
+    </button>
+</div>
+
                 <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -z-10"></div>
 
-                <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
-                    <i class="fa-solid fa-user-check text-2xl"></i>
-                </div>
-                
-                <div class="mb-8">
+<!-- PINDAHKAN JAM KE SINI (DI ATAS KAMERA) -->
+                <div class="mb-6"> <!-- Saya mengubah mb-8 menjadi mb-6 agar jaraknya lebih pas -->
                     <div id="live-clock" class="text-4xl sm:text-5xl font-bold text-slate-800 font-mono tracking-tight drop-shadow-sm">00:00:00</div>
                     <div id="live-date" class="text-sm sm:text-base text-slate-500 font-medium mt-2 bg-slate-50 inline-block px-4 py-1 rounded-full border border-slate-100">Memuat tanggal...</div>
                 </div>
 
-                <h2 class="text-lg font-bold text-slate-700 mb-4 uppercase tracking-wide">Verifikasi Kehadiran</h2>
-                
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-keyboard text-slate-400"></i>
+               <!-- Backdrop Gelap saat Kamera Membesar -->
+                <div id="camera-backdrop" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+                <!-- Modifikasi UI Kamera -->
+                <div id="camera-container" class="relative w-24 h-24 mx-auto mb-6 transition-all duration-500 ease-in-out z-10">
+                    <video id="camera-stream" autoplay playsinline muted class="w-full h-full object-cover rounded-full shadow-inner border-4 border-emerald-100 bg-slate-200 mirror-video transition-all duration-500"></video>
+                    <canvas id="canvas-capture" class="hidden"></canvas>
+                    
+                    <!-- Overlay Hitung Mundur & Instruksi (Baru) -->
+<div id="countdown-overlay" class="absolute inset-0 flex-col items-center justify-center bg-black/60 hidden opacity-0 transition-all duration-300 rounded-full">
+    
+    <!-- Bagian 1: Pesan Peringatan & Tombol (Muncul Pertama) -->
+    <div id="step-back-warning" class="flex flex-col items-center gap-4 transition-all duration-300">
+        <div class="bg-black/70 px-5 py-4 rounded-xl mx-4 text-center border border-white/20 shadow-2xl backdrop-blur-md">
+            <p class="text-white text-lg font-bold mb-1"><i class="fa-solid fa-arrows-left-right"></i> Jauhkan Kamera!</p>
+            <p class="text-white/90 text-xs max-w-[220px]">Pastikan background di belakang Anda terlihat minimal 50%.</p>
+        </div>
+        
+        <!-- Bungkus tombol dan teks instruksi -->
+        <div class="flex flex-col items-center gap-1.5">
+            <button id="btn-start-countdown" class="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-check"></i> OK, Mulai Foto
+            </button>
+            <!-- Instruksi Enter (Disembunyikan di HP, Muncul di Layar Tablet/Desktop) -->
+            <span class="text-white/70 text-[11px] hidden sm:block tracking-wide">
+                atau tekan <b>Enter</b> pada keyboard
+            </span>
+        </div>
+    </div>
+
+    <!-- Bagian 2: Angka Hitung Mundur (Disembunyikan Awalnya) -->
+    <span id="countdown-number" class="text-white text-7xl font-bold drop-shadow-xl hidden">3</span>
+
+</div>
+
+                    <div id="camera-status" class="absolute bottom-0 right-0 bg-emerald-500 text-white w-7 h-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm text-xs transition-opacity duration-300">
+                        <i class="fa-solid fa-camera"></i>
                     </div>
-                    <input type="text" id="employee-code-input" class="w-full pl-10 pr-4 py-4 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-center font-bold text-xl uppercase transition-all shadow-sm" placeholder="KODE KARYAWAN" autocomplete="off">
                 </div>
                 
-                <p id="employee-resolved-name" class="mt-3 text-sm text-slate-500 font-medium transition-all duration-300">Silakan masukkan 6 digit kode Anda</p>
-                
-                <button id="btn-check-out" disabled class="mt-5 w-full p-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-person-walking-arrow-right"></i> Absen Pulang
-                </button>
+                <div id="manual-input-section">
+    <h2 class="text-lg font-bold text-slate-700 mb-4 uppercase tracking-wide">Verifikasi Kehadiran</h2>
+    <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <i class="fa-solid fa-keyboard text-slate-400"></i>
+        </div>
+        <input type="text" id="employee-code-input" disabled class="w-full pl-10 pr-4 py-4 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-center font-bold text-xl uppercase transition-all shadow-sm disabled:bg-slate-100 disabled:cursor-not-allowed" placeholder="KODE KARYAWAN" autocomplete="off">
+    </div>
+    <p id="employee-resolved-name" class="mt-3 text-sm text-slate-500 font-medium transition-all duration-300">Silakan masukkan 6 digit kode Anda</p>
+</div>
+
+<!-- TAMBAHKAN UI KHUSUS MODE LOGIN -->
+<div id="logged-in-section" class="hidden flex-col items-center mt-2">
+    <h2 id="welcome-message" class="text-xl font-bold text-emerald-600 mb-1">Halo, Nama!</h2>
+    <p id="attendance-status-text" class="text-sm text-slate-500 mb-6 font-medium">Memeriksa status kehadiran...</p>
+    
+    <!-- Tombol Auto Check-In -->
+    <button id="btn-auto-check-in" class="hidden w-full p-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all">
+        <i class="fa-solid fa-camera"></i> OK, Ambil Foto Masuk
+    </button>
+</div>
+
+           <!-- TOMBOL ABSEN PULANG (Biarkan seperti aslinya, letakkan di bawah div di atas) -->
+<button id="btn-check-out" class="hidden mt-5 w-full p-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+    <i class="fa-solid fa-person-walking-arrow-right"></i> Absen Pulang
+</button>
             </div>
 
             <div id="daily-attendance-summary" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all duration-300"></div>
@@ -67,27 +244,235 @@
 
     <script>
         // Konfigurasi Supabase
-        const SUPABASE_URL = 'https://tigszfvmbpvznotykryx.supabase.co';
+          const SUPABASE_URL = 'https://tigszfvmbpvznotykryx.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpZ3N6ZnZtYnB2em5vdHlrcnl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MzQwMjcsImV4cCI6MjA5OTMxMDAyN30.O0-y9FI_sikkPVig2XNDJ_zlTnfJZv-hRirPurs8yQc';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         // Konfigurasi Telegram
         const TELEGRAM_BOT_TOKEN = "8863289019:AAGy7A9x9AV3HD7Kh2Xbzv-O3JZSlNERtZo";
         const TELEGRAM_CHAT_ID = "-1004473111299";
-        const TELEGRAM_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-
         // State Data
         let masterEmployeeList = [];
         let cachedRecords = [];
+        // --- DETEKSI PERANGKAT GLOBAL ---
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i.test(navigator.userAgent) || window.innerWidth < 768;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
+  // --- LOGIKA TOMBOL LUPA PASSWORD DI MODAL LOGIN ---
+const btnForgotPassword = document.getElementById('btn-forgot-password');
+const btnBackToLogin = document.getElementById('btn-back-to-login');
+const formContainer = document.getElementById('login-form-container');
+const helpContainer = document.getElementById('forgot-password-help');
+
+if (btnForgotPassword && btnBackToLogin) {
+    // Tampilkan panel solusi
+    btnForgotPassword.onclick = () => {
+        formContainer.classList.add('hidden');
+        helpContainer.classList.remove('hidden');
+        helpContainer.classList.add('flex');
+    };
+
+    // Kembali ke form login
+    btnBackToLogin.onclick = () => {
+        helpContainer.classList.remove('flex');
+        helpContainer.classList.add('hidden');
+        formContainer.classList.remove('hidden');
+    };
+}
+
+     // --- FITUR BARU: Konfirmasi, Hitung Mundur, & Perbesar Kamera (Pure CSS Tanpa Paksa Fullscreen) ---
+async function startCountdownAndSnap() {
+    return new Promise((resolve) => {
+        const cameraContainer = document.getElementById('camera-container');
+        const videoEl = document.getElementById('camera-stream');
+        const backdrop = document.getElementById('camera-backdrop');
+        const overlay = document.getElementById('countdown-overlay');
+        const numberEl = document.getElementById('countdown-number');
+        const statusIcon = document.getElementById('camera-status');
+        
+        const warningDiv = document.getElementById('step-back-warning');
+        const btnStart = document.getElementById('btn-start-countdown');
+        
+              if (document.activeElement) {
+            document.activeElement.blur();
+        }
+
+        backdrop.classList.remove('hidden');
+        requestAnimationFrame(() => backdrop.classList.remove('opacity-0'));
+
+        // --- UBAH UKURAN KAMERA (MURNI CSS SAJA) ---
+        if (isMobileDevice) {
+            // Jika HP: Kamera menutupi 100% area browser tanpa harus memicu API Fullscreen Native
+            cameraContainer.className = "fixed top-0 left-0 w-full h-[100dvh] z-[70] transition-all duration-300 ease-in-out bg-black";
+            videoEl.className = "w-full h-full object-cover rounded-none mirror-video transition-all duration-300";
+        } else {
+            // Jika Desktop: Kamera tampil seperti kotak pop-up melayang di tengah
+            cameraContainer.className = "fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90vw] h-[75vh] max-w-sm z-[70] transition-all duration-500 ease-in-out";
+            videoEl.className = "w-full h-full object-cover rounded-3xl shadow-2xl bg-slate-200 mirror-video transition-all duration-500";
+        }
+        statusIcon.classList.add('hidden');
+
+        // Setup Overlay Hitung Mundur
+        overlay.classList.remove('hidden', 'rounded-full', 'opacity-0');
+        if (isMobileDevice) {
+            overlay.classList.add('flex', 'rounded-none');
+        } else {
+            overlay.classList.add('flex', 'rounded-3xl'); 
+        }
+        warningDiv.classList.remove('hidden');
+        warningDiv.classList.add('flex');
+        numberEl.classList.add('hidden');
+
+        const startTimer = async () => {
+            btnStart.removeEventListener('click', startTimer);
+            document.removeEventListener('keydown', enterHandler);
+
+            // Ganti tampilan dari peringatan ke angka hitung mundur
+            warningDiv.classList.remove('flex');
+            warningDiv.classList.add('hidden');
+            numberEl.classList.remove('hidden');
+
+            let count = 3;
+            numberEl.textContent = count;
+           
+            const interval = setInterval(async () => {
+                count--;
+                if (count > 0) {
+                    numberEl.textContent = count;
+                } else {
+                    clearInterval(interval);
+                    
+                    numberEl.innerHTML = `
+                        <div class="flex flex-col items-center">
+                            <span class="text-7xl mb-2">📸</span>
+                            <span class="text-sm font-medium text-white/90 bg-black/50 px-4 py-1.5 rounded-full">Tahan posisi...</span>
+                        </div>
+                    `;
+                    
+                    // Ambil Foto
+                    const blob = await takeSnapshot();
+                    
+                    numberEl.innerHTML = `
+                        <div class="flex flex-col items-center">
+                            <span class="text-6xl text-emerald-400 mb-2"><i class="fa-solid fa-circle-check"></i></span>
+                            <span class="text-sm font-medium text-white/90 bg-black/50 px-4 py-1.5 rounded-full">Selesai!</span>
+                        </div>
+                    `;
+                    
+                    await new Promise(resolveDelay => setTimeout(resolveDelay, 1500));
+                    
+                    numberEl.innerHTML = ""; 
+                    numberEl.textContent = ""; 
+                    
+                    // Kembalikan Kamera ke Ukuran Semula (Mengecil)
+                    overlay.classList.remove('bg-black/60', 'flex', 'rounded-3xl', 'rounded-none');
+                    overlay.classList.add('hidden', 'opacity-0');
+                    
+                    cameraContainer.className = "relative w-24 h-24 mx-auto mb-6 transition-all duration-500 ease-in-out z-10";
+                    videoEl.className = "w-full h-full object-cover rounded-full shadow-inner border-4 border-emerald-100 bg-slate-200 mirror-video transition-all duration-500";
+                    statusIcon.classList.remove('hidden');
+
+                    backdrop.classList.add('opacity-0');
+                    setTimeout(() => backdrop.classList.add('hidden'), 300);
+
+                    resolve(blob);
+                }
+            }, 1000);
+        };
+
+        const enterHandler = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                startTimer();
+            }
+        };
+
+        btnStart.addEventListener('click', startTimer);
+        document.addEventListener('keydown', enterHandler);
+    });
+}
+
+        function cobaLagiKamera() {
+    const loadingOverlay = document.getElementById('camera-loading');
+    const deniedOverlay = document.getElementById('camera-denied');
+
+    // Sembunyikan layar error dan tampilkan kembali layar loading
+    deniedOverlay.classList.add('hidden');
+    loadingOverlay.classList.remove('hidden');
+    loadingOverlay.classList.remove('opacity-0');
+
+    // Panggil ulang fungsi inisialisasi kamera
+    initCamera();
+}
+
+        // --- FITUR KAMERA DENGAN KUNCI KEAMANAN ---
+       async function initCamera() {
+    const loadingOverlay = document.getElementById('camera-loading');
+    const deniedOverlay = document.getElementById('camera-denied');
+    const inputEl = document.getElementById('employee-code-input');
+
+    try {
+        // Meminta akses kamera 
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+        
+        const videoEl = document.getElementById('camera-stream');
+        videoEl.srcObject = stream;
+
+        // Mendeteksi jika kamera tiba-tiba terputus (karena izin dicabut)
+        const track = stream.getVideoTracks()[0];
+        track.onended = () => {
+            // Matikan input dan tampilkan layar penutup
+            inputEl.disabled = true;
+            deniedOverlay.classList.remove('hidden');
+            showToast("Kamera Terputus", "Izin kamera baru saja dicabut. Silakan izinkan kembali.", "error");
+        };
+
+        // Jika berhasil: Hilangkan loading dan buka kunci input aplikasi
+        loadingOverlay.classList.add('opacity-0');
+        setTimeout(() => {
+            loadingOverlay.classList.add('hidden');
+            inputEl.disabled = false;
+            inputEl.focus(); 
+        }, 300);
+
+    } catch (err) {
+        console.error("Gagal mengakses kamera:", err);
+        
+        // Jika ditolak/gagal: Sembunyikan loading, munculkan overlay error permanen
+        loadingOverlay.classList.add('hidden');
+        deniedOverlay.classList.remove('hidden');
+
+        showToast("Akses Ditolak", "Aplikasi dikunci karena tidak ada izin kamera.", "error");
+    }
+}
+
+        async function takeSnapshot() {
+            const video = document.getElementById('camera-stream');
+            const canvas = document.getElementById('canvas-capture');
+
+            if (!video.srcObject || video.videoWidth === 0) return null;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            return new Promise(resolve => {
+                canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8);
+            });
+        }
+        
         // Fungsi Bantuan Waktu & Tanggal
         function getLocalDateString() { 
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`; 
-}
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`; 
+        }
         function formatDate(date) { return date; }
         function cleanTime(time) { return time ? time : "--"; }
 
@@ -143,21 +528,32 @@
         const apiService = {
             async fetchAllEmployees() {
                 const { data } = await supabaseClient.from('employees').select('*');
-                // HANYA masukkan karyawan yang memiliki isian check_in_target DAN check_out_target
                 return (data || []).filter(emp => emp.check_in_target && emp.check_out_target);
             },
+            // TAMBAHKAN FUNGSI INI
+   async loginUser(username, password) {
+        const { data } = await supabaseClient
+            .from('employees')
+            .select('*')
+            // Ubah .eq menjadi .ilike agar tidak peduli huruf besar/kecil
+            .ilike('username', username) 
+            .eq('password', password)
+            .maybeSingle();
+        
+        if (!data) return { success: false };
+        return { success: true, user: data };
+    },
+
             async fetchAllRecords() {
                 const today = getLocalDateString();
                 const { data } = await supabaseClient.from('attendance').select('*').eq('date', today).order('checkIn', { ascending: false });
                 return data || [];
             },
             async verifyEmployee(code) {
-                // Menggunakan maybeSingle() lebih aman daripada single() jika data tidak ditemukan
                 const { data: user } = await supabaseClient.from('employees').select('*').eq('code', code).maybeSingle();
                 
                 if (!user) return { success: false, reason: 'not_found' };
                 
-                // TOLAK jika karyawan tidak memiliki jadwal presensi (kolom kosong/null)
                 if (!user.check_in_target || !user.check_out_target) {
                     return { success: false, reason: 'no_schedule' };
                 }
@@ -189,9 +585,8 @@
             return masterEmployeeList.filter(emp => !presentCodes.includes(emp.code));
         }
 
-        // Fungsi Notifikasi Laporan Telegram
-        async function sendTelegramNotification(employeeName, action) {
-            // Data sudah harus disinkronkan (melalui refreshDashboardData) sebelum fungsi ini dipanggil
+       // Fungsi Notifikasi Laporan Telegram
+        async function sendTelegramNotification(employeeName, action, imageBlob = null) {
             const todayStr = getLocalDateString();
             const presentRecords = cachedRecords.filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--");
             
@@ -202,16 +597,25 @@
             const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
             const date = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-            // Pengaturan Emoji Berdasarkan Tipe Absen
             const headerEmoji = action === "Absen Masuk" ? "🟢" : "🔴";
 
             let message = `🔔 *NOTIFIKASI ${action.toUpperCase()}*\n`;
             message += `📅 ${date} - ${time}\n\n`;
             message += `${headerEmoji} *${employeeName}* baru saja melakukan *${action}*.\n\n`;
             
+            // --- KODE BARU: MENGECEK DAN MENYEMATKAN ALASAN TIDAK INSTAL APLIKASI ---
+            const skipReason = sessionStorage.getItem('skip_install_reason');
+            if (skipReason) {
+                message += `⚠️ *CATATAN PENGGUNAAN BROWSER:*\n`;
+                message += `Karyawan ini tidak menggunakan aplikasi karena:\n_"${skipReason}"_\n\n`;
+                
+                // Menghapus alasan setelah terkirim agar tidak dikirim ulang saat Absen Pulang
+                sessionStorage.removeItem('skip_install_reason');
+            }
+            // ------------------------------------------------------------------------
+
             message += `📊 *REKAP STATUS KARYAWAN SAAT INI:*\n\n`;
             
-            // List Sedang Bekerja
             message += `💼 *SEDANG BEKERJA (${sedangBekerja.length}):*\n`;
             if(sedangBekerja.length > 0) {
                 sedangBekerja.forEach(emp => message += `- ${emp.employeeName} (Masuk: ${emp.checkIn})\n`);
@@ -219,7 +623,6 @@
                 message += `- Tidak ada\n`;
             }
             
-            // List Sudah Pulang
             message += `\n🏠 *SUDAH PULANG (${sudahPulang.length}):*\n`;
             if(sudahPulang.length > 0) {
                 sudahPulang.forEach(emp => message += `- ${emp.employeeName} (Keluar: ${emp.checkOut})\n`);
@@ -227,7 +630,6 @@
                 message += `- Tidak ada\n`;
             }
             
-            // List Belum Hadir / Absen
             message += `\n⚪ *BELUM HADIR/ABSEN (${belumHadir.length}):*\n`;
             if(belumHadir.length > 0) {
                 belumHadir.forEach(emp => message += `- ${emp.name}\n`);
@@ -236,15 +638,28 @@
             }
 
             try {
-                await fetch(TELEGRAM_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: TELEGRAM_CHAT_ID,
-                        text: message,
-                        parse_mode: 'Markdown'
-                    })
-                });
+                if (imageBlob) {
+                    const formData = new FormData();
+                    formData.append("chat_id", TELEGRAM_CHAT_ID);
+                    formData.append("photo", imageBlob, "selfie.jpg");
+                    formData.append("caption", message);
+                    formData.append("parse_mode", "Markdown");
+
+                    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                } else {
+                    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: TELEGRAM_CHAT_ID,
+                            text: message,
+                            parse_mode: 'Markdown'
+                        })
+                    });
+                }
             } catch(err) {
                 console.error("Gagal mengirim notifikasi Telegram:", err);
             }
@@ -283,7 +698,6 @@
 
             let html = `<div class="flex flex-col gap-6">`;
             
-            // --- TAMPILAN KARYAWAN SUDAH HADIR ---
             html += `<div>
                 <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <i class="fa-solid fa-user-check"></i> Sudah Hadir (${presentRecords.length})
@@ -309,7 +723,6 @@
 
             html += `<hr class="border-slate-100">`;
 
-            // --- TAMPILAN KARYAWAN BELUM HADIR ---
             html += `<div>
                 <h4 class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <i class="fa-solid fa-user-clock"></i> Belum Hadir (${notPresentEmployees.length})
@@ -363,6 +776,8 @@
             const btnCheckOut = document.getElementById('btn-check-out');
             const resolveText = document.getElementById('employee-resolved-name');
             
+            btnCheckOut.classList.add('hidden');
+
             if (code.length === 0) {
                 resolveText.textContent = "Silakan masukkan 6 digit kode Anda...";
                 resolveText.className = "mt-3 text-sm text-slate-500 font-medium";
@@ -380,33 +795,34 @@
                 e.target.disabled = true; 
                 const res = await apiService.verifyEmployee(code);
                 e.target.disabled = false;
-                e.target.focus();
 
                 if (res.success) {
+                    // --- KODE BARU: TUTUP KEYBOARD OTOMATIS JIKA KODE BENAR ---
+                    e.target.blur(); 
+                    
                     resolveText.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> Karyawan Dikenali: ${res.user.name}</span>`;
                     
                     if (!res.record) {
-                        // KONDISI ABSEN MASUK
+                        const imageBlob = await startCountdownAndSnap();
+
                         const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
                         await apiService.createRecord(res.user.code, res.user.name, time);
 
                         sebutkanNama(`Selamat bekerja, ${res.user.username}`);
-                        
                         showToast("Berhasil Masuk!", `Selamat bekerja, ${res.user.name}. Waktu: ${time}`, "success");
                         e.target.value = ""; 
                         setTimeout(() => resolveText.textContent = "Silakan masukkan 6 digit kode Anda...", 2000);
                         
-                        // Perbarui data DULU, lalu kirim ke Telegram agar rangkuman akurat
                         await refreshDashboardData(); 
-                        sendTelegramNotification(res.user.name, "Absen Masuk");
+                        sendTelegramNotification(res.user.name, "Absen Masuk", imageBlob);
                         
                     } else if (!res.record.checkOut || res.record.checkOut === '--') {
-                        // KONDISI SIAP ABSEN PULANG
+                        btnCheckOut.classList.remove('hidden');
+                        
                         btnCheckOut.disabled = false;
                         btnCheckOut.dataset.code = code; 
-
                         btnCheckOut.dataset.username = res.user.username;
-                        btnCheckOut.dataset.name = res.user.name; // Simpan nama untuk ditarik saat klik tombol Pulang
+                        btnCheckOut.dataset.name = res.user.name; 
                         
                         showToast("Informasi", "Anda sudah absen masuk. Silakan klik tombol 'Absen Pulang' jika ingin mengakhiri shift.", "info");
                     } else {
@@ -415,6 +831,9 @@
                         e.target.value = ""; 
                     }
                 } else {
+                    // --- KODE BARU: TETAP BUKA KEYBOARD JIKA KODE SALAH ---
+                    e.target.focus();
+
                     if (res.reason === 'no_schedule') {
                         resolveText.innerHTML = `<span class="text-amber-500 font-bold"><i class="fa-solid fa-circle-exclamation"></i> Jadwal Presensi Belum Diatur</span>`;
                         sebutkanNama("Maaf, jadwal presensi Anda belum diatur di sistem.");
@@ -425,7 +844,7 @@
                         showToast("Gagal", "Kode tidak terdaftar di sistem.", "error");
                     }
                 }
-            }, 500); 
+            }, 500);
         });
 
         // Handler klik tombol Absen Pulang
@@ -433,7 +852,6 @@
             const code = this.dataset.code;
             const username = this.dataset.username;
             
-            // Tarik nama Karyawan dari dataset, jika gagal, cari di cachedRecords
             const fallbackName = cachedRecords.find(r => r.employeeCode === code)?.employeeName || "Karyawan";
             const name = this.dataset.name || fallbackName;
             
@@ -444,28 +862,310 @@
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
             btn.disabled = true;
 
+            const imageBlob = await startCountdownAndSnap();
+
             const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
             await apiService.checkOut(code, time);
             
             sebutkanNama(`Terima kasih, ${username}, hati-hati di jalan.`);
-            
             showToast("Berhasil Keluar!", `Terima kasih atas kerja keras Anda hari ini. Waktu: ${time}`, "success");
             
             document.getElementById('employee-code-input').value = "";
             document.getElementById('employee-resolved-name').textContent = "Silakan masukkan 6 digit kode Anda...";
             document.getElementById('employee-resolved-name').className = "mt-3 text-sm text-slate-500 font-medium";
             
+          // --- KODE BARU: Sembunyikan lagi dan kembalikan kondisi tombol ---
+            btn.classList.add('hidden'); 
             btn.innerHTML = originalText;
+            btn.disabled = false;
             
-            // Perbarui data DULU ke Supabase, kemudian kirim Laporan Absen Pulang ke Telegram
             await refreshDashboardData();
-            sendTelegramNotification(name, "Absen Pulang");
+            sendTelegramNotification(name, "Absen Pulang", imageBlob);
+            checkLoginState();
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            initClock(); 
-            refreshDashboardData(); 
-        });
+    initClock(); 
+    initCamera(); 
+    refreshDashboardData(); 
+    checkLoginState();
+
+    // --- TAMBAHAN KODE: Mencegah kamera tertutup keyboard di HP ---
+    const inputKode = document.getElementById('employee-code-input');
+    inputKode.addEventListener('focus', () => {
+        // Memberi jeda 300 milidetik menunggu animasi keyboard HP muncul sepenuhnya
+        setTimeout(() => {
+            // Gulir layar kembali ke bagian paling atas secara halus
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }, 300);
+    });
+});
+
+// --- LOGIKA LOGIN & MANAJEMEN SESI ---
+let currentUser = JSON.parse(localStorage.getItem('attendance_user')) || null;
+let isAutoCheckInRunning = false;
+
+// Fungsi untuk menampilkan tooltip pengenalan fitur logout
+function introduceLogoutFeature() {
+    // Jika sudah pernah muncul, abaikan
+    if (localStorage.getItem('logout_intro_shown')) return;
+
+    const btnLogout = document.getElementById('btn-logout');
+    if (!btnLogout || btnLogout.classList.contains('hidden')) return;
+
+    const existingTooltip = document.getElementById('logout-tooltip');
+    if (existingTooltip) existingTooltip.remove();
+
+    // Efek Notifikasi
+    btnLogout.classList.add('relative', 'ring-2', 'ring-rose-400', 'ring-offset-2', 'bg-rose-50');
+    const notifDot = document.createElement('span');
+    notifDot.id = 'logout-notif-dot';
+    notifDot.className = 'absolute -top-1.5 -right-1.5 flex h-4 w-4 z-50';
+    notifDot.innerHTML = `
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-4 w-4 bg-rose-500 border-2 border-white shadow-sm"></span>
+    `;
+    btnLogout.appendChild(notifDot);
+
+    // Buat Tooltip
+    const tooltip = document.createElement('div');
+    tooltip.id = 'logout-tooltip';
+    tooltip.className = 'fixed top-16 right-4 sm:right-6 bg-blue-600 text-white p-4 rounded-xl shadow-2xl z-[100] w-72 transition-all duration-500 transform opacity-0 translate-y-2 pointer-events-auto';
+    tooltip.innerHTML = `
+        <div class="relative">
+            <div class="absolute -top-6 right-2 sm:right-4 border-8 border-transparent border-b-blue-600"></div>
+            <h4 class="font-bold text-sm mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-bell text-yellow-300"></i> Info Penting
+            </h4>
+            <p class="text-xs text-blue-100 mb-4 leading-relaxed">
+                Tombol <b>Logout</b> ini digunakan jika Anda ingin keluar dari akun atau beralih ke opsi <b>memasukkan kode manual</b>.
+            </p>
+            <button id="btn-close-tooltip" class="w-full bg-white text-blue-700 hover:bg-slate-100 text-xs font-bold py-2 rounded-lg transition-colors shadow-sm active:scale-95 cursor-pointer">
+                Oke, Saya Mengerti
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(tooltip);
+
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            tooltip.classList.remove('opacity-0', 'translate-y-2');
+            tooltip.classList.add('opacity-100', 'translate-y-0');
+        }, 50);
+    });
+
+    const closeBtn = tooltip.querySelector('#btn-close-tooltip');
+    closeBtn.onclick = () => {
+        // Hilangkan tooltip dengan animasi
+        tooltip.classList.remove('opacity-100', 'translate-y-0');
+        tooltip.classList.add('opacity-0', 'translate-y-2');
+        
+        // Bersihkan efek notifikasi merah
+        btnLogout.classList.remove('relative', 'ring-2', 'ring-rose-400', 'ring-offset-2', 'bg-rose-50');
+        const dot = document.getElementById('logout-notif-dot');
+        if (dot) dot.remove();
+        
+        // Simpan sesi agar besok tidak muncul lagi
+        localStorage.setItem('logout_intro_shown', 'true');
+
+        // Hapus elemen dari DOM (TIDAK ADA PERINTAH BUKA KAMERA DI SINI)
+        setTimeout(() => {
+            tooltip.remove();
+        }, 300);
+    };
+}
+
+// Tambahkan parameter isAfterLogout = false
+async function checkLoginState(isAfterLogout = false) {
+    const manualSection = document.getElementById('manual-input-section');
+    const loggedInSection = document.getElementById('logged-in-section');
+    const btnLogin = document.getElementById('btn-login-modal');
+    const btnLogout = document.getElementById('btn-logout');
+    const welcomeMsg = document.getElementById('welcome-message');
+    const statusText = document.getElementById('attendance-status-text');
+    const btnCheckIn = document.getElementById('btn-auto-check-in');
+    const btnCheckOut = document.getElementById('btn-check-out');
+    
+    const loginModal = document.getElementById('login-modal');
+    const btnCloseLogin = document.getElementById('btn-close-login');
+
+    const isAppMode = 
+        window.matchMedia('(display-mode: standalone)').matches || 
+        window.matchMedia('(display-mode: fullscreen)').matches || 
+        window.matchMedia('(display-mode: minimal-ui)').matches || 
+        window.navigator.standalone === true || 
+        document.referrer.includes('android-app://') ||
+        window.location.search.includes('mode=pwa');
+
+    if (currentUser) {
+        // ... (Kode bagian ini tetap sama seperti aslinya)
+        manualSection.classList.add('hidden');
+        loggedInSection.classList.remove('hidden');
+        loggedInSection.classList.add('flex');
+        
+        btnLogin.classList.add('hidden');
+        btnLogout.classList.remove('hidden');
+              
+        loginModal.classList.add('opacity-0');
+        setTimeout(() => loginModal.classList.add('hidden'), 300);
+        
+        welcomeMsg.textContent = `Halo, ${currentUser.name}!`;
+        
+       const today = getLocalDateString();
+        const { data: record } = await supabaseClient
+            .from('attendance')
+            .select('*')
+            .eq('employeeCode', currentUser.code)
+            .eq('date', today)
+            .maybeSingle();
+
+        btnCheckIn.classList.add('hidden');
+        btnCheckOut.classList.add('hidden');
+
+     if (!record) {
+            statusText.innerHTML = `<span class="text-amber-500"><i class="fa-solid fa-circle-exclamation"></i> Anda belum absen masuk hari ini.</span>`;
+            btnCheckIn.classList.remove('hidden');
+
+            // --- LOGIKA BARU ---
+            // Cek apakah ini hari PERTAMA aplikasi dibuka setelah instalasi
+            if (!localStorage.getItem('logout_intro_shown')) {
+                // JIKA PERTAMA KALI: Tampilkan tooltip pengenalan logout SAJA.
+                // Auto check-in dimatikan agar user bisa klik "OK, Ambil Foto Masuk" sendiri.
+                setTimeout(() => {
+                    introduceLogoutFeature();
+                }, 300);
+            } else {
+                // JIKA BUKAN PERTAMA KALI (Hari-hari berikutnya): 
+                // Kamera otomatis terbuka seperti biasa (Auto Check-In)
+                if (!isAutoCheckInRunning) {
+                    isAutoCheckInRunning = true; 
+                    setTimeout(() => {
+                        const autoBtn = document.getElementById('btn-auto-check-in');
+                        if (autoBtn) autoBtn.click();
+                    }, 500); 
+                }
+            }
+            
+        } else if (!record.checkOut || record.checkOut === '--') {
+            isAutoCheckInRunning = false; 
+            statusText.innerHTML = `<span class="text-emerald-500"><i class="fa-solid fa-clock"></i> Anda sudah absen masuk pada ${record.checkIn}.</span>`;
+            btnCheckOut.classList.remove('hidden');
+            
+            btnCheckOut.dataset.code = currentUser.code;
+            btnCheckOut.dataset.username = currentUser.username;
+            btnCheckOut.dataset.name = currentUser.name;
+
+            // Panggil pengenalan saja tanpa harus buka kamera
+            setTimeout(() => { introduceLogoutFeature(); }, 300);
+        } else {
+            isAutoCheckInRunning = false; 
+            statusText.innerHTML = `<span class="text-blue-500"><i class="fa-solid fa-circle-check"></i> Absensi hari ini telah selesai.</span>`;
+            
+            // Panggil pengenalan saja tanpa harus buka kamera
+            setTimeout(() => { introduceLogoutFeature(); }, 300);
+        }
+    } else {
+        // --- JIKA BELUM LOGIN (Atau Baru Saja Logout) ---
+        loggedInSection.classList.add('hidden');
+        loggedInSection.classList.remove('flex');
+        btnLogin.classList.remove('hidden');
+        btnLogout.classList.add('hidden');
+        btnCheckIn.classList.add('hidden');
+        btnCheckOut.classList.add('hidden');
+
+        // TAMBAHAN LOGIKA PADA BAGIAN INI:
+        if (isAppMode && !isAfterLogout) {
+            // APLIKASI & BUKAN DARI LOGOUT: Paksa Login
+            manualSection.classList.add('hidden'); 
+            
+            loginModal.classList.remove('hidden');
+            setTimeout(() => loginModal.classList.remove('opacity-0'), 10);
+            
+            if (btnCloseLogin) btnCloseLogin.classList.add('hidden');
+        } else {
+            // BROWSER ATAU SETELAH LOGOUT: Tampilkan form input kode manual
+            manualSection.classList.remove('hidden');
+            
+            if (btnCloseLogin) btnCloseLogin.classList.remove('hidden');
+        }
+    }
+}
+
+// Event UI Modal Login
+const loginModal = document.getElementById('login-modal');
+document.getElementById('btn-login-modal').onclick = () => {
+    loginModal.classList.remove('hidden');
+    setTimeout(() => loginModal.classList.remove('opacity-0'), 10);
+};
+document.getElementById('btn-close-login').onclick = () => {
+    loginModal.classList.add('opacity-0');
+    setTimeout(() => loginModal.classList.add('hidden'), 300);
+};
+
+// Proses Submit Login
+document.getElementById('btn-submit-login').onclick = async () => {
+    // Tambahkan .trim() agar spasi yang tidak sengaja terketik di awal/akhir akan dihapus
+    const userIn = document.getElementById('login-username').value.trim();
+    const passIn = document.getElementById('login-password').value.trim();
+    
+    const btn = document.getElementById('btn-submit-login');
+    
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Loading...`;
+    
+    const res = await apiService.loginUser(userIn, passIn);
+    
+    if (res.success) {
+        currentUser = res.user;
+        localStorage.setItem('attendance_user', JSON.stringify(currentUser)); // Simpan Sesi
+        showToast("Login Berhasil", `Selamat datang, ${currentUser.name}`, "success");
+        document.getElementById('btn-close-login').click();
+        
+        // Reset input login
+        document.getElementById('login-username').value = '';
+        document.getElementById('login-password').value = '';
+        
+        checkLoginState();
+    } else {
+        showToast("Login Gagal", "Username atau password salah.", "error");
+        btn.innerHTML = "Login";
+    }
+};
+
+// Proses Logout
+// Proses Logout
+document.getElementById('btn-logout').onclick = () => {
+    currentUser = null;
+    localStorage.removeItem('attendance_user'); // Hapus Sesi
+    showToast("Logout", "Anda telah keluar ke mode manual.", "info");
+    
+    // Kirimkan nilai 'true' agar modal login tidak otomatis terbuka
+    checkLoginState(true); 
+};
+
+// Proses Auto Check-In (Absen Masuk Khusus Mode Login)
+document.getElementById('btn-auto-check-in').onclick = async () => {
+    const btn = document.getElementById('btn-auto-check-in');
+    btn.disabled = true;
+    
+    const imageBlob = await startCountdownAndSnap();
+    const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+    
+    // Tulis ke database
+    await apiService.createRecord(currentUser.code, currentUser.name, time);
+    
+    sebutkanNama(`Selamat bekerja, ${currentUser.username}`);
+    showToast("Berhasil Masuk!", `Selamat bekerja. Waktu: ${time}`, "success");
+    
+    await refreshDashboardData();
+    sendTelegramNotification(currentUser.name, "Absen Masuk", imageBlob); // Buka jika diperlukan
+    
+    btn.disabled = false;
+    checkLoginState(); // Refresh status tulisan & sembunyikan tombol
+};
 
         // FUNGSI BARU: Mengubah teks menjadi suara
         function sebutkanNama(teks) {
@@ -480,6 +1180,212 @@
                 console.log("Browser Anda tidak mendukung fitur Text-to-Speech.");
             }
         }
+
+        // Mendaftarkan Service Worker untuk PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => console.log('ServiceWorker registered'))
+                    .catch(err => console.log('ServiceWorker registration failed: ', err));
+            });
+        }
+
+     // --- LOGIKA PWA & PEMBLOKIRAN WAJIB INSTAL DI HP ---
+        let deferredPrompt;
+
+        // 1. Deteksi Mode Aplikasi & Perangkat
+        const isStandalone = 
+            window.matchMedia('(display-mode: standalone)').matches || 
+            window.matchMedia('(display-mode: fullscreen)').matches || 
+            window.matchMedia('(display-mode: minimal-ui)').matches || 
+            window.navigator.standalone === true || 
+            document.referrer.includes('android-app://') ||
+            window.location.search.includes('mode=pwa');
+
+        // 2. Fungsi untuk menampilkan layar Wajib Instal / Blokir
+        function showMandatoryScreen(type) {
+            // Matikan kamera secara paksa agar tidak menyala di background browser
+            const videoEl = document.getElementById('camera-stream');
+            if (videoEl && videoEl.srcObject) {
+                 videoEl.srcObject.getTracks().forEach(track => track.stop());
+            }
+
+            let existing = document.getElementById('pwa-mandatory-overlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'pwa-mandatory-overlay';
+            overlay.className = "fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center p-6 text-center animate-fade-in overflow-y-auto";
+
+            let content = '';
+            
+            // UI Formulir Alasan (Bisa dipanggil di Android maupun iOS)
+            const reasonFormUI = `
+                <div id="install-reason-ui" class="hidden flex-col items-center w-full max-w-xs animate-fade-in mt-8">
+                    <div class="w-16 h-16 bg-blue-900/50 rounded-full flex items-center justify-center border-2 border-blue-500 mb-4">
+                        <i class="fa-solid fa-comment-dots text-2xl text-blue-400"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Kendala Instalasi</h3>
+                    <p class="text-slate-300 text-sm mb-4 text-center leading-relaxed">Beritahu admin kendala Anda agar dapat diizinkan absen melalui browser hari ini.</p>
+                    <textarea id="skip-reason-input" rows="3" class="w-full rounded-xl p-3 bg-slate-800 border border-slate-600 text-white text-sm mb-4 focus:outline-none focus:border-blue-500 placeholder-slate-500" placeholder="Contoh: Memori HP penuh, atau tombol instal tidak muncul..."></textarea>
+                    
+                    <button id="btn-submit-reason" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition-all flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> Kirim & Buka Aplikasi
+                    </button>
+                    <button id="btn-cancel-skip" class="mt-4 text-slate-400 text-sm hover:text-white transition-colors p-2">Kembali ke halaman instal</button>
+                </div>
+            `;
+
+            if (type === 'android_install') {
+                content = `
+                    <div id="install-default-ui" class="flex flex-col items-center w-full animate-fade-in">
+                        <div class="w-24 h-24 bg-emerald-900/50 rounded-full flex items-center justify-center border-4 border-emerald-500 shadow-xl mb-6">
+                            <i class="fa-solid fa-download text-4xl text-emerald-400"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-3">Wajib Instal Aplikasi</h2>
+                        <p class="text-slate-300 mb-8 max-w-sm leading-relaxed">
+                            Sistem absensi tidak dapat digunakan melalui browser HP.<br><br>Silakan instal aplikasi ini ke perangkat Anda terlebih dahulu.
+                        </p>
+                        <button id="btn-force-install" class="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 w-full max-w-xs text-lg mb-2">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Instal Sekarang
+                        </button>
+                        <button id="btn-skip-install" class="mt-4 text-slate-400 text-sm underline hover:text-slate-300 p-2">Saya mengalami kendala instalasi</button>
+                    </div>
+                    ${reasonFormUI}
+                `;
+            } else if (type === 'ios_install') {
+                content = `
+                    <div id="install-default-ui" class="flex flex-col items-center w-full animate-fade-in">
+                        <div class="w-24 h-24 bg-blue-900/50 rounded-full flex items-center justify-center border-4 border-blue-500 shadow-xl mb-6">
+                            <i class="fa-brands fa-apple text-4xl text-blue-400"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-3">Wajib Instal (iOS)</h2>
+                        <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700 max-w-sm mb-4 text-slate-300 text-sm text-left leading-relaxed w-full">
+                            Pengguna iPhone/iPad diwajibkan melakukan instalasi manual:<br><br>
+                            1. Tekan ikon <b>Bagikan</b> <i class="fa-solid fa-arrow-up-from-bracket mx-1 text-blue-400"></i> di bilah bawah Safari.<br>
+                            2. Pilih opsi <b>"Add to Home Screen"</b> <i class="fa-regular fa-square-plus mx-1 text-blue-400"></i>.<br>
+                            3. Buka aplikasi absensi dari Layar Utama Anda.
+                        </div>
+                        <button id="btn-skip-install" class="mt-2 text-slate-400 text-sm underline hover:text-slate-300 p-2">Saya mengalami kendala instalasi</button>
+                    </div>
+                    ${reasonFormUI}
+                `;
+            } else if (type === 'blocked') {
+                content = `
+                    <div class="flex flex-col items-center w-full">
+                        <div class="w-24 h-24 bg-rose-900/50 rounded-full flex items-center justify-center border-4 border-rose-500 shadow-xl mb-6">
+                            <i class="fa-solid fa-ban text-4xl text-rose-500"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-3">Akses Diblokir</h2>
+                        <p class="text-slate-300 mb-8 max-w-sm leading-relaxed">
+                            Aplikasi ini sudah terinstal di perangkat Anda.<br><br><b>Halaman web ini dikunci.</b> Silakan tutup browser ini dan buka dari Layar Utama HP Anda.
+                        </p>
+                    </div>
+                `;
+            } else if (type === 'installing') {
+    content = `
+        <div class="flex flex-col items-center w-full">
+            <div class="w-24 h-24 bg-emerald-900/30 rounded-full flex items-center justify-center border-4 border-emerald-500 mx-auto mb-6">
+                <i class="fa-solid fa-mobile-screen-button text-4xl text-emerald-400 animate-bounce"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-emerald-400 mb-3 animate-pulse">Berhasil Terinstal!</h2>
+            <p class="text-slate-300 max-w-sm leading-relaxed">Aplikasi telah terpasang. Silakan tutup browser ini dan buka aplikasi dari Layar Utama HP Anda.</p>
+        </div>
+    `;
+}
+
+            overlay.innerHTML = content;
+            document.body.appendChild(overlay);
+
+            // EVENT LISTENER: Tombol Instal Android
+            const btnForce = document.getElementById('btn-force-install');
+            if (btnForce) {
+                btnForce.addEventListener('click', async () => {
+                    if (!deferredPrompt) return;
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        showMandatoryScreen('installing');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+
+            // EVENT LISTENER: Navigasi UI Skip Instalasi
+            const btnSkip = document.getElementById('btn-skip-install');
+            const btnCancelSkip = document.getElementById('btn-cancel-skip');
+            const uiDefault = document.getElementById('install-default-ui');
+            const uiReason = document.getElementById('install-reason-ui');
+
+            if (btnSkip) {
+                btnSkip.addEventListener('click', () => {
+                    uiDefault.classList.add('hidden');
+                    uiReason.classList.remove('hidden');
+                    uiReason.classList.add('flex');
+                });
+            }
+            if (btnCancelSkip) {
+                btnCancelSkip.addEventListener('click', () => {
+                    uiReason.classList.add('hidden');
+                    uiReason.classList.remove('flex');
+                    uiDefault.classList.remove('hidden');
+                });
+            }
+
+            // EVENT LISTENER: Simpan Alasan dan Buka Aplikasi (Dikirim saat absen)
+            const btnSubmitReason = document.getElementById('btn-submit-reason');
+            if (btnSubmitReason) {
+                btnSubmitReason.addEventListener('click', () => {
+                    const reasonText = document.getElementById('skip-reason-input').value.trim();
+                    if (!reasonText) {
+                        alert("Harap isi alasan atau kendala Anda.");
+                        return;
+                    }
+
+                    // Menandai sesi bahwa pengguna ini diizinkan memakai browser
+                    sessionStorage.setItem('skip_install_allowed', 'true');
+                    
+                    // Simpan alasan secara lokal untuk dikirim nanti saat absen
+                    sessionStorage.setItem('skip_install_reason', reasonText);
+
+                    // Hapus layar pemblokiran
+                    overlay.remove();
+                    
+                    // Nyalakan kembali kamera yang sebelumnya dimatikan
+                    initCamera();
+                    
+                    showToast("Akses Diizinkan", "Silakan lakukan absensi. Kendala Anda akan dilampirkan pada notifikasi Telegram.", "info");
+                });
+            }
+        }
+
+        // 3. Eksekusi Utama Logika (Hanya dieksekusi jika di Browser HP)
+        if (!isStandalone && isMobileDevice) {
+            // Cek apakah pengguna sudah diberi izin di sesi tab ini
+            if (sessionStorage.getItem('skip_install_allowed') !== 'true') {
+                if (isIOS) {
+                    showMandatoryScreen('ios_install');
+                } else {
+                    let promptFired = false;
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        e.preventDefault();
+                        deferredPrompt = e;
+                        promptFired = true;
+                        showMandatoryScreen('android_install');
+                    });
+
+                    setTimeout(() => {
+                        if (!promptFired) {
+                            showMandatoryScreen('blocked');
+                        }
+                    }, 1500);
+                }
+            }
+        }
+
+      window.addEventListener('appinstalled', () => {
+    showMandatoryScreen('installing');
+});
     </script>
 </body>
 </html>
