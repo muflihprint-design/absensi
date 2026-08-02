@@ -282,6 +282,11 @@ if (btnForgotPassword && btnBackToLogin) {
 
      // --- FITUR BARU: Konfirmasi, Hitung Mundur, & Perbesar Kamera (Pure CSS Tanpa Paksa Fullscreen) ---
 async function startCountdownAndSnap() {
+const videoElCheck = document.getElementById('camera-stream');
+    if (!videoElCheck.srcObject || videoElCheck.srcObject.getVideoTracks().length === 0) {
+        return Promise.resolve(null); // Langsung kembalikan nilai kosong tanpa memuat UI
+    }
+
     return new Promise((resolve) => {
         const cameraContainer = document.getElementById('camera-container');
         const videoEl = document.getElementById('camera-stream');
@@ -1042,12 +1047,21 @@ async function checkLoginState(isAfterLogout = false) {
                 // JIKA BUKAN PERTAMA KALI (Hari-hari berikutnya): 
                 // Kamera otomatis terbuka seperti biasa (Auto Check-In)
                 if (!isAutoCheckInRunning) {
-                    isAutoCheckInRunning = true; 
-                    setTimeout(() => {
-                        const autoBtn = document.getElementById('btn-auto-check-in');
-                        if (autoBtn) autoBtn.click();
-                    }, 500); 
-                }
+                isAutoCheckInRunning = true; 
+                setTimeout(() => {
+                    // --- TAMBAHAN KODE: Cek izin kamera sebelum klik otomatis ---
+                    const videoEl = document.getElementById('camera-stream');
+                    if (!videoEl.srcObject || videoEl.srcObject.getVideoTracks().length === 0) {
+                        isAutoCheckInRunning = false; // Reset status
+                        showToast("Akses Tertunda", "Tidak dapat membuka kamera. Izinkan kamera terlebih dahulu.", "error");
+                        return; // Hentikan auto-click
+                    }
+                    // ------------------------------------------------------------
+
+                    const autoBtn = document.getElementById('btn-auto-check-in');
+                    if (autoBtn) autoBtn.click();
+                }, 500); 
+            }
             }
             
         } else if (!record.checkOut || record.checkOut === '--') {
