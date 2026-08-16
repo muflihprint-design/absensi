@@ -258,6 +258,8 @@
         // State Data
         let masterEmployeeList = [];
         let cachedRecords = [];
+        
+let userLocation = { lat: null, lng: null };
         // --- DETEKSI PERANGKAT GLOBAL ---
         const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i.test(navigator.userAgent) || window.innerWidth < 768;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -267,6 +269,8 @@ const btnForgotPassword = document.getElementById('btn-forgot-password');
 const btnBackToLogin = document.getElementById('btn-back-to-login');
 const formContainer = document.getElementById('login-form-container');
 const helpContainer = document.getElementById('forgot-password-help');
+
+
 
 if (btnForgotPassword && btnBackToLogin) {
     // Tampilkan panel solusi
@@ -399,6 +403,30 @@ const videoElCheck = document.getElementById('camera-stream');
         btnStart.addEventListener('click', startTimer);
         document.addEventListener('keydown', enterHandler);
     });
+}
+
+// --- FITUR BARU: Ambil Lokasi GPS ---
+function initLocation() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                userLocation.lat = position.coords.latitude;
+                userLocation.lng = position.coords.longitude;
+                console.log("Lokasi berhasil didapatkan:", userLocation);
+            },
+            (error) => {
+                console.warn("Gagal mendapatkan lokasi:", error.message);
+                showToast("Akses Lokasi Ditolak", "Mohon izinkan akses lokasi agar absen lebih akurat.", "warning");
+            },
+            {
+                enableHighAccuracy: true, // Memaksa penggunaan GPS asli (bukan estimasi jaringan)
+                timeout: 10000,
+                maximumAge: 0
+            }
+        );
+    } else {
+        showToast("Error", "Browser HP Anda tidak mendukung fitur lokasi.", "error");
+    }
 }
 
         function cobaLagiKamera() {
@@ -609,9 +637,16 @@ const videoElCheck = document.getElementById('camera-stream');
             const headerEmoji = action === "Absen Masuk" ? "🟢" : "🔴";
 
             let message = `🔔 *NOTIFIKASI ${action.toUpperCase()}*\n`;
-            message += `📅 ${date} - ${time}\n\n`;
-            message += `${headerEmoji} *${employeeName}* baru saja melakukan *${action}*.\n\n`;
-            
+message += `📅 ${date} - ${time}\n\n`;
+message += `${headerEmoji} *${employeeName}* baru saja melakukan *${action}*.\n\n`;
+
+// --- TAMBAHAN: Menampilkan Link Google Maps ---
+if (userLocation.lat && userLocation.lng) {
+    message += `📍 *Lokasi Absen (GPS):*\n[Buka Titik di Google Maps](https://www.google.com/maps?q=${userLocation.lat},${userLocation.lng})\n\n`;
+} else {
+    message += `📍 *Lokasi Absen (GPS):*\n_Lokasi tidak terdeteksi (Izin ditolak/GPS Mati)_\n\n`;
+}
+
             // --- KODE BARU: MENGECEK DAN MENYEMATKAN ALASAN TIDAK INSTAL APLIKASI ---
             const skipReason = sessionStorage.getItem('skip_install_reason');
             if (skipReason) {
@@ -895,7 +930,8 @@ const videoElCheck = document.getElementById('camera-stream');
 
         document.addEventListener('DOMContentLoaded', () => {
     initClock(); 
-    initCamera(); 
+    initCamera();
+    initLocation(); 
     refreshDashboardData(); 
     checkLoginState();
 
