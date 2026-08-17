@@ -622,7 +622,7 @@ function initLocation() {
             return masterEmployeeList.filter(emp => !presentCodes.includes(emp.code));
         }
 
-        // Fungsi Notifikasi Laporan Telegram
+  // Fungsi Notifikasi Laporan Telegram
         async function sendTelegramNotification(employeeName, action, imageBlob = null) {
             const todayStr = getLocalDateString();
             const presentRecords = cachedRecords.filter(r => r.date === todayStr && r.checkIn && r.checkIn !== "--");
@@ -640,25 +640,26 @@ function initLocation() {
             message += `📅 ${date} - ${time}\n\n`;
             message += `${headerEmoji} *${employeeName}* baru saja melakukan *${action}*.\n\n`;
 
-            // --- KODE BARU: Mengambil teks alamat otomatis & Menambahkan ke Pesan ---
+            // --- MENDAPATKAN TEKS ALAMAT LENGKAP (JALAN, KELURAHAN, KOTA) ---
             let addressText = "Detail alamat sedang diproses / tidak tersedia.";
             if (userLocation.lat && userLocation.lng) {
                 try {
-                    // Menggunakan API gratis tanpa key untuk mengubah koordinat jadi teks lokasi
-                    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${userLocation.lat}&longitude=${userLocation.lng}&localityLanguage=id`);
+                    // Menggunakan OpenStreetMap (Nominatim) untuk mendeteksi nama jalan & alamat lengkap
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation.lat}&lon=${userLocation.lng}`);
                     const geoData = await res.json();
-                    if(geoData.locality || geoData.city) {
-                        addressText = `${geoData.locality || ''}, ${geoData.city || ''}, ${geoData.principalSubdivision || ''}`.replace(/^, | , /g, '').trim();
+                    if(geoData.display_name) {
+                        addressText = geoData.display_name; // Menghasilkan alamat lengkap seperti "Jl. Sudirman, RT 01..."
                     }
                 } catch (e) {
                     console.error("Gagal mendapatkan teks alamat", e);
                 }
-                message += `📍 *Lokasi Absen (GPS):*\n🏢 ${addressText}\n[Buka via Google Maps](https://www.google.com/maps?q=${userLocation.lat},${userLocation.lng})\n\n`;
+                // Menambahkan teks alamat ke caption foto
+                message += `📍 *Keterangan Alamat:*\n${addressText}\n\n`;
             } else {
-                message += `📍 *Lokasi Absen (GPS):*\n_Lokasi tidak terdeteksi (Izin ditolak/GPS Mati)_\n\n`;
+                message += `📍 *Keterangan Alamat:*\n_Lokasi tidak terdeteksi (Izin ditolak/GPS Mati)_\n\n`;
             }
 
-            // --- KODE BARU: MENGECEK DAN MENYEMATKAN ALASAN TIDAK INSTAL APLIKASI ---
+            // --- KODE LAMA: MENGECEK DAN MENYEMATKAN ALASAN TIDAK INSTAL APLIKASI ---
             const skipReason = sessionStorage.getItem('skip_install_reason');
             if (skipReason) {
                 message += `⚠️ *CATATAN PENGGUNAAN BROWSER:*\n`;
@@ -690,7 +691,7 @@ function initLocation() {
             }
 
             try {
-                // 1. Kirim Foto beserta teks caption
+                // 1. KIRIM FOTO BESERTA CAPTION REKAP KE TELEGRAM
                 if (imageBlob) {
                     const formData = new FormData();
                     formData.append("chat_id", TELEGRAM_CHAT_ID);
@@ -714,15 +715,17 @@ function initLocation() {
                     });
                 }
 
-                // 2. KODE BARU: Kirim Peta (Location) langsung ke Telegram agar muncul map-nya
+                // 2. KIRIM TITIK PETA SEKALIGUS TEKS ALAMAT MENGGUNAKAN FITUR sendVenue
                 if (userLocation.lat && userLocation.lng) {
-                    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendLocation`, {
+                    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVenue`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             chat_id: TELEGRAM_CHAT_ID,
                             latitude: userLocation.lat,
-                            longitude: userLocation.lng
+                            longitude: userLocation.lng,
+                            title: `Lokasi Absen: ${employeeName}`,
+                            address: addressText
                         })
                     });
                 }
@@ -730,7 +733,7 @@ function initLocation() {
                 console.error("Gagal mengirim notifikasi Telegram:", err);
             }
         }
-      
+        
         // Fungsi Ringkasan Live dari pengguna
         async function updateLiveAttendanceSummary(isLoadingSheet = false) {
             const summaryContainer = document.getElementById('daily-attendance-summary');
