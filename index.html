@@ -641,24 +641,24 @@ function initLocation() {
             message += `${headerEmoji} *${employeeName}* baru saja melakukan *${action}*.\n\n`;
 
             // --- MENDAPATKAN TEKS ALAMAT LENGKAP ---
-            let addressText = "Detail alamat sedang diproses / tidak tersedia.";
-            if (userLocation.lat && userLocation.lng) {
-                try {
-                    // Menggunakan OpenStreetMap (Nominatim) untuk mendeteksi nama jalan & alamat lengkap
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation.lat}&lon=${userLocation.lng}`);
-                    const geoData = await res.json();
-                    if(geoData.display_name) {
-                        addressText = geoData.display_name;
-                    }
-                } catch (e) {
-                    console.error("Gagal mendapatkan teks alamat", e);
-                }
-                
-                // Menampilkan teks alamat dan link Google Maps sesuai permintaan
-                message += `📍 *Lokasi Absen (GPS):*\n🏢 ${addressText}\n[Buka via Google Maps](https://www.google.com/maps?q=${userLocation.lat},${userLocation.lng})\n\n`;
-            } else {
-                message += `📍 *Lokasi Absen (GPS):*\n_Lokasi tidak terdeteksi (Izin ditolak/GPS Mati)_\n\n`;
-            }
+      // --- KODE BARU: Menampilkan Teks Alamat & Link Google Maps ---
+let addressText = "Detail alamat sedang diproses / tidak tersedia.";
+if (userLocation.lat && userLocation.lng) {
+    try {
+        // Menggunakan OpenStreetMap (Nominatim) untuk mendeteksi nama jalan & alamat lengkap
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation.lat}&lon=${userLocation.lng}`);
+        const geoData = await res.json();
+        if(geoData.display_name) {
+            addressText = geoData.display_name; // Menghasilkan alamat lengkap seperti "Jl. Sudirman, RT 01..."
+        }
+    } catch (e) {
+        console.error("Gagal mendapatkan teks alamat", e);
+    }
+    
+    message += `📍 *Lokasi Absen (GPS):*\n🏢 ${addressText}\n[Buka Titik di Google Maps](https://www.google.com/maps?q=${userLocation.lat},${userLocation.lng})\n\n`;
+} else {
+    message += `📍 *Lokasi Absen (GPS):*\n_Lokasi tidak terdeteksi (Izin ditolak/GPS Mati)_\n\n`;
+}
 
             // --- MENGECEK DAN MENYEMATKAN ALASAN TIDAK INSTAL APLIKASI ---
             const skipReason = sessionStorage.getItem('skip_install_reason');
