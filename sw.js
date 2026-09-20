@@ -1,6 +1,6 @@
 // UBAH NAMA CACHE INI SETIAP KALI ANDA MELAKUKAN PEMBARUAN PADA HTML/CSS/JS
 // Contoh: v1, v2, v3, dst.
-const CACHE_NAME = 'absensi-cache-v3'; 
+const CACHE_NAME = 'absensi-cache-v4'; 
 
 const urlsToCache = [
   '/',
