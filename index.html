@@ -43,10 +43,10 @@
 
         .loader {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #059669;
+            border-top: 3px solid currentColor;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -84,7 +84,7 @@
             </div>
             <div class="flex gap-2 mt-6">
                 <button id="btn-close-login" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold hover:bg-slate-200">Batal</button>
-                <button id="btn-submit-login" class="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700">Login</button>
+                <button id="btn-submit-login" class="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 flex items-center justify-center">Login</button>
             </div>
             
             <div class="mt-4 text-center">
@@ -132,8 +132,21 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1">Username / Nama</label>
                 <input type="text" id="fp-username" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
             </div>
-            <button type="submit" id="btn-send-otp" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2">
+            <button type="submit" id="btn-send-otp" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2 flex items-center justify-center">
                 Kirim Kode OTP
+            </button>
+        </form>
+
+        <form id="fp-state-wa" onsubmit="saveWaAndSendOtp(event)" class="hidden space-y-4">
+            <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm text-blue-700 mb-2">
+                Nomor WhatsApp Anda belum terdaftar. Silakan masukkan nomor WA aktif untuk menerima kode OTP.
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Nomor WhatsApp</label>
+                <input type="number" id="fp-input-wa" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: 08123456789" required>
+            </div>
+            <button type="submit" id="btn-fp-save-wa" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2 flex items-center justify-center">
+                Simpan & Kirim Kode OTP
             </button>
         </form>
 
@@ -157,8 +170,58 @@
                 <label class="block text-sm font-medium text-slate-700 mb-1">Konfirmasi Password Baru</label>
                 <input type="password" id="fp-confirm-pass" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
             </div>
-            <button type="submit" id="btn-reset-pass" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2">
+            <button type="submit" id="btn-reset-pass" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2 flex items-center justify-center">
                 Simpan Password Baru
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Verifikasi WA & OTP Akses Aplikasi -->
+<div id="wa-otp-modal" class="hidden fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-slate-100 relative">
+        <div class="mb-5 text-center">
+            <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-800">Verifikasi Keamanan</h3>
+            <p class="text-sm text-slate-500 mt-1">Sistem memerlukan verifikasi untuk melanjutkan.</p>
+        </div>
+
+        <form id="step-input-wa" onsubmit="saveWaNumber(event)" class="hidden space-y-4">
+            <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm text-blue-700 mb-2">
+                Nomor WhatsApp Anda belum terdaftar. Silakan masukkan nomor WA aktif untuk menerima kode akses.
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Nomor WhatsApp</label>
+                <input type="number" id="input-wa-number" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Contoh: 08123456789" required>
+                <p class="text-xs text-slate-400 mt-1">Angka 0 di depan akan otomatis diubah menjadi 62.</p>
+            </div>
+            <button type="submit" id="btn-save-wa" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2 flex items-center justify-center">
+                Simpan & Kirim OTP
+            </button>
+        </form>
+
+        <form id="step-verify-otp" onsubmit="verifyAppOtp(event)" class="hidden space-y-4">
+            <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-lg mb-4 text-center">
+                <p id="app-otp-info" class="text-xs text-emerald-700 font-medium mb-1"></p>
+                <p class="text-xs font-bold text-rose-500">
+                    Sisa waktu: <span id="app-otp-timer" class="font-mono text-base">05:00</span>
+                </p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Kode OTP Akses</label>
+                <input type="text" id="input-app-otp" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-center tracking-[0.5em] font-mono text-xl" placeholder="••••••" maxlength="6" required>
+            </div>
+            <button type="submit" id="btn-verify-otp" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2 flex items-center justify-center">
+                Verifikasi & Buka Aplikasi
+            </button>
+            <button type="button" onclick="sendAppOtp()" class="w-full text-sm text-slate-500 hover:text-emerald-600 font-semibold py-2 transition-colors">
+                Kirim Ulang Kode
+            </button>
+            
+            <button type="button" id="btn-cancel-login-otp" class="w-full text-xs text-rose-500 hover:text-rose-700 font-semibold pt-4 transition-colors">
+                Batal & Logout
             </button>
         </form>
     </div>
@@ -444,6 +507,66 @@
 </main>
 
 <script>
+    // --- HELPER FUNCTIONS ---
+    const UI = {
+        el: (id) => document.getElementById(id),
+        show: (id) => UI.el(id)?.classList.remove('hidden'),
+        hide: (id) => UI.el(id)?.classList.add('hidden'),
+        toggleFlex: (id, isShow) => {
+            const el = UI.el(id);
+            if(!el) return;
+            isShow ? (el.classList.remove('hidden'), el.classList.add('flex')) : (el.classList.remove('flex'), el.classList.add('hidden'));
+        }
+    };
+
+    async function withLoading(btnId, loadingText, asyncAction) {
+        const btn = UI.el(btnId);
+        if (!btn) return await asyncAction(); 
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<div class="loader inline-block mr-2 border-2"></div> ${loadingText}`;
+        try {
+            await asyncAction();
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    }
+
+    function startOtpTimer(timerId, btnId, timestamp, onExpire) {
+        const timerEl = UI.el(timerId);
+        const btnReset = UI.el(btnId);
+        
+        if(btnReset) {
+            btnReset.disabled = false;
+            btnReset.classList.replace('bg-slate-300', 'bg-blue-600') || btnReset.classList.replace('bg-slate-300', 'bg-emerald-600');
+            btnReset.classList.remove('cursor-not-allowed', 'text-slate-500');
+        }
+        
+        return setInterval(() => {
+            const timeLeft = (5 * 60 * 1000) - (Date.now() - timestamp);
+            if (timeLeft <= 0) {
+                if(timerEl) {
+                    timerEl.textContent = "KEDALUWARSA";
+                    timerEl.classList.add('text-rose-600', 'font-black');
+                }
+                if(btnReset) {
+                    btnReset.disabled = true;
+                    btnReset.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+                    btnReset.classList.remove('bg-blue-600', 'bg-emerald-600'); 
+                }
+                if (onExpire) onExpire();
+                return;
+            }
+            if(timerEl) {
+                const m = Math.floor(timeLeft / 60000).toString().padStart(2, '0');
+                const s = Math.floor((timeLeft % 60000) / 1000).toString().padStart(2, '0');
+                timerEl.textContent = `${m}:${s}`;
+            }
+        }, 1000);
+    }
+    // --- END OF HELPERS ---
+
     const SUPABASE_URL = 'https://tigszfvmbpvznotykryx.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpZ3N6ZnZtYnB2em5vdHlrcnl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM3MzQwMjcsImV4cCI6MjA5OTMxMDAyN30.O0-y9FI_sikkPVig2XNDJ_zlTnfJZv-hRirPurs8yQc';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -452,179 +575,131 @@
     const TELEGRAM_CHAT_ID = "-1004473111299";
 
     const AppState = {
-        user: null,
-        attendance: [],
-        holidays: new Set(),
-        admin: {
-            employees: {},
-            attendance: []
-        }
+        user: null, attendance: [], holidays: new Set(),
+        admin: { employees: {}, attendance: [] }
     };
     const ALLOWED_ADMIN_ROLES = ['Bendahara', 'Owner', 'HRD'];
     
     let masterEmployeeList = [];
     let cachedRecords = [];
     let userLocation = { lat: null, lng: null };
-    let tempOtpCode = "";
-    let tempOtpUser = null;
-    let tempOtpTimestamp = 0; 
-    let otpCountdownInterval = null; // Tambahan variabel untuk interval timer
+    let tempOtpCode = "", tempOtpUser = null, tempOtpTimestamp = 0; 
+    let otpCountdownInterval = null; 
     let currentUser = JSON.parse(localStorage.getItem('attendance_user')) || null;
     let isAutoCheckInRunning = false;
+    let appOtpCode = "", appOtpTimestamp = 0;
+    let appOtpInterval = null;
 
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i.test(navigator.userAgent) || window.innerWidth < 768;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
     // Toggle Password Visibility Logic
-    const loginPasswordInput = document.getElementById('login-password');
-    const togglePasswordBtn = document.getElementById('toggle-password');
-    const iconEye = document.getElementById('icon-eye');
-    const iconEyeOff = document.getElementById('icon-eye-off');
-    
+    const loginPasswordInput = UI.el('login-password');
+    const togglePasswordBtn = UI.el('toggle-password');
     if (togglePasswordBtn) {
         togglePasswordBtn.addEventListener('click', () => {
             const type = loginPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             loginPasswordInput.setAttribute('type', type);
             if (type === 'text') {
-                iconEye.classList.add('hidden');
-                iconEyeOff.classList.remove('hidden');
+                UI.hide('icon-eye'); UI.show('icon-eye-off');
             } else {
-                iconEye.classList.remove('hidden');
-                iconEyeOff.classList.add('hidden');
+                UI.show('icon-eye'); UI.hide('icon-eye-off');
             }
         });
     }
 
     // Modal Events
-    const btnForgotPassword = document.getElementById('btn-forgot-password');
-    const btnBackToLogin = document.getElementById('btn-back-to-login');
-    const formContainer = document.getElementById('login-form-container');
-    const helpContainer = document.getElementById('forgot-password-help');
-
+    const btnForgotPassword = UI.el('btn-forgot-password');
+    const btnBackToLogin = UI.el('btn-back-to-login');
     if (btnForgotPassword && btnBackToLogin) {
-        btnForgotPassword.onclick = () => {
-            formContainer.classList.add('hidden');
-            helpContainer.classList.remove('hidden');
-            helpContainer.classList.add('flex');
-        };
-        btnBackToLogin.onclick = () => {
-            helpContainer.classList.remove('flex');
-            helpContainer.classList.add('hidden');
-            formContainer.classList.remove('hidden');
-        };
+        btnForgotPassword.onclick = () => { UI.hide('login-form-container'); UI.toggleFlex('forgot-password-help', true); };
+        btnBackToLogin.onclick = () => { UI.toggleFlex('forgot-password-help', false); UI.show('login-form-container'); };
     }
 
-    // Tab Navigation Logic
-    function switchAppTab(tab) {
-        const btnAbsensi = document.getElementById('btn-tab-absensi');
-        const btnCalendar = document.getElementById('btn-tab-calendar');
-        const btnSlips = document.getElementById('btn-tab-slips');
-        const contentAbsensi = document.getElementById('tab-content-absensi');
-        const contentCalendar = document.getElementById('tab-content-calendar');
-        const contentSlips = document.getElementById('tab-content-slips');
-        
-        [btnAbsensi, btnCalendar, btnSlips].forEach(btn => {
-            btn.className = "flex-1 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700 focus:outline-none flex items-center justify-center gap-2 transition-colors";
+    // Tab Navigation Logic Refactored
+    function switchAppTab(tabId) {
+        ['absensi', 'calendar', 'slips'].forEach(t => {
+            const btn = UI.el(`btn-tab-${t}`);
+            const isActive = (t === tabId);
+            if (btn) {
+                btn.className = `flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-colors border-b-2 focus:outline-none ${isActive ? 'text-emerald-600 border-emerald-600' : 'text-slate-500 border-transparent hover:text-slate-700'}`;
+            }
+            isActive ? UI.show(`tab-content-${t}`) : UI.hide(`tab-content-${t}`);
         });
-        [contentAbsensi, contentCalendar, contentSlips].forEach(content => content.classList.add('hidden'));
 
-        if (tab === 'absensi') {
-            btnAbsensi.classList.remove('text-slate-500', 'border-transparent', 'hover:text-slate-700');
-            btnAbsensi.classList.add('text-emerald-600', 'border-emerald-600');
-            contentAbsensi.classList.remove('hidden');
-            initCamera(); 
-        } else if (tab === 'calendar') {
-            btnCalendar.classList.remove('text-slate-500', 'border-transparent', 'hover:text-slate-700');
-            btnCalendar.classList.add('text-emerald-600', 'border-emerald-600');
-            contentCalendar.classList.remove('hidden');
-            turnOffCamera(); 
-        } else if (tab === 'slips') {
-            btnSlips.classList.remove('text-slate-500', 'border-transparent', 'hover:text-slate-700');
-            btnSlips.classList.add('text-emerald-600', 'border-emerald-600');
-            contentSlips.classList.remove('hidden');
-            turnOffCamera(); 
-        }
+        if (tabId === 'absensi') initCamera(); else turnOffCamera();
     }
 
     function turnOffCamera() {
-        const videoEl = document.getElementById('camera-stream');
+        const videoEl = UI.el('camera-stream');
         if (videoEl && videoEl.srcObject) {
             videoEl.srcObject.getTracks().forEach(track => track.stop());
             videoEl.srcObject = null;
         }
-        const inputEl = document.getElementById('employee-code-input');
+        const inputEl = UI.el('employee-code-input');
         if (inputEl) inputEl.disabled = true;
         
-        document.getElementById('camera-loading').classList.add('hidden');
-        document.getElementById('camera-denied').classList.add('hidden');
+        UI.hide('camera-loading'); UI.hide('camera-denied');
     }
 
     async function initCamera() {
-        const contentAbsensi = document.getElementById('tab-content-absensi');
-        if (contentAbsensi && contentAbsensi.classList.contains('hidden')) {
-            return; 
-        }
+        const contentAbsensi = UI.el('tab-content-absensi');
+        if (contentAbsensi && contentAbsensi.classList.contains('hidden')) return; 
         
-        const loadingOverlay = document.getElementById('camera-loading');
-        const deniedOverlay = document.getElementById('camera-denied');
-        const inputEl = document.getElementById('employee-code-input');
+        const loadingOverlay = UI.el('camera-loading');
+        const inputEl = UI.el('employee-code-input');
         
-        loadingOverlay.classList.remove('hidden');
+        UI.show('camera-loading');
         loadingOverlay.classList.remove('opacity-0');
-        deniedOverlay.classList.add('hidden');
+        UI.hide('camera-denied');
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-            const videoEl = document.getElementById('camera-stream');
+            const videoEl = UI.el('camera-stream');
             videoEl.srcObject = stream;
 
             const track = stream.getVideoTracks()[0];
             track.onended = () => {
                 inputEl.disabled = true;
-                deniedOverlay.classList.remove('hidden');
+                UI.show('camera-denied');
                 showToast("Kamera Terputus", "Izin kamera baru saja dicabut. Silakan izinkan kembali.", "error");
             };
 
             loadingOverlay.classList.add('opacity-0');
             setTimeout(() => {
-                loadingOverlay.classList.add('hidden');
+                UI.hide('camera-loading');
                 inputEl.disabled = false;
                 inputEl.focus(); 
             }, 300);
 
         } catch (err) {
             console.error("Gagal mengakses kamera:", err);
-            loadingOverlay.classList.add('hidden');
-            deniedOverlay.classList.remove('hidden');
+            UI.hide('camera-loading');
+            UI.show('camera-denied');
             showToast("Akses Ditolak", "Aplikasi dikunci karena tidak ada izin kamera.", "error");
         }
     }
 
-    function cobaLagiKamera() {
-        initCamera();
-    }
+    function cobaLagiKamera() { initCamera(); }
 
-  async function startCountdownAndSnap() {
-        const videoElCheck = document.getElementById('camera-stream');
-        if (!videoElCheck.srcObject || videoElCheck.srcObject.getVideoTracks().length === 0) {
-            return Promise.resolve(null); 
-        }
+    async function startCountdownAndSnap() {
+        const videoElCheck = UI.el('camera-stream');
+        if (!videoElCheck.srcObject || videoElCheck.srcObject.getVideoTracks().length === 0) return Promise.resolve(null); 
 
         return new Promise((resolve) => {
-            const cameraContainer = document.getElementById('camera-container');
-            const videoEl = document.getElementById('camera-stream');
-            const backdrop = document.getElementById('camera-backdrop');
-            const overlay = document.getElementById('countdown-overlay');
-            const numberEl = document.getElementById('countdown-number');
-            const statusIcon = document.getElementById('camera-status');
-            
-            const warningDiv = document.getElementById('step-back-warning');
-            const btnStart = document.getElementById('btn-start-countdown');
-            const btnCancel = document.getElementById('btn-cancel-snap'); // Tambahan Tombol Batal
+            const cameraContainer = UI.el('camera-container');
+            const videoEl = UI.el('camera-stream');
+            const backdrop = UI.el('camera-backdrop');
+            const overlay = UI.el('countdown-overlay');
+            const numberEl = UI.el('countdown-number');
+            const statusIcon = UI.el('camera-status');
+            const warningDiv = UI.el('step-back-warning');
+            const btnStart = UI.el('btn-start-countdown');
+            const btnCancel = UI.el('btn-cancel-snap'); 
             
             if (document.activeElement) document.activeElement.blur();
 
-            backdrop.classList.remove('hidden');
+            UI.show('camera-backdrop');
             requestAnimationFrame(() => backdrop.classList.remove('opacity-0'));
 
             if (isMobileDevice) {
@@ -634,17 +709,15 @@
                 cameraContainer.className = "fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90vw] h-[75vh] max-w-sm z-[70] transition-all duration-500 ease-in-out";
                 videoEl.className = "w-full h-full object-cover rounded-3xl shadow-2xl bg-slate-200 mirror-video transition-all duration-500";
             }
-            statusIcon.classList.add('hidden');
+            UI.hide('camera-status');
 
             overlay.classList.remove('hidden', 'rounded-full', 'opacity-0');
             if (isMobileDevice) overlay.classList.add('flex', 'rounded-none');
             else overlay.classList.add('flex', 'rounded-3xl'); 
             
-            warningDiv.classList.remove('hidden');
-            warningDiv.classList.add('flex');
-            numberEl.classList.add('hidden');
+            UI.toggleFlex('step-back-warning', true);
+            UI.hide('countdown-number');
 
-            // Logika ketika klik Batal
             const cancelTimer = () => {
                 btnStart.removeEventListener('click', startTimer);
                 btnCancel.removeEventListener('click', cancelTimer);
@@ -655,22 +728,21 @@
                 
                 cameraContainer.className = "relative w-24 h-24 mx-auto mb-6 transition-all duration-500 ease-in-out z-10";
                 videoEl.className = "w-full h-full object-cover rounded-full shadow-inner border-4 border-emerald-100 bg-slate-200 mirror-video transition-all duration-500";
-                statusIcon.classList.remove('hidden');
+                UI.show('camera-status');
 
                 backdrop.classList.add('opacity-0');
-                setTimeout(() => backdrop.classList.add('hidden'), 300);
+                setTimeout(() => UI.hide('camera-backdrop'), 300);
 
-                resolve(null); // Return null saat dibatalkan
+                resolve(null); 
             };
 
             const startTimer = async () => {
                 btnStart.removeEventListener('click', startTimer);
-                btnCancel.removeEventListener('click', cancelTimer); // Bersihkan listener Batal
+                btnCancel.removeEventListener('click', cancelTimer); 
                 document.removeEventListener('keydown', enterHandler);
 
-                warningDiv.classList.remove('flex');
-                warningDiv.classList.add('hidden');
-                numberEl.classList.remove('hidden');
+                UI.toggleFlex('step-back-warning', false);
+                UI.show('countdown-number');
 
                 let count = 3;
                 numberEl.textContent = count;
@@ -701,17 +773,16 @@
                         await new Promise(resolveDelay => setTimeout(resolveDelay, 1500));
                         
                         numberEl.innerHTML = ""; 
-                        numberEl.textContent = ""; 
                         
                         overlay.classList.remove('bg-black/60', 'flex', 'rounded-3xl', 'rounded-none');
                         overlay.classList.add('hidden', 'opacity-0');
                         
                         cameraContainer.className = "relative w-24 h-24 mx-auto mb-6 transition-all duration-500 ease-in-out z-10";
                         videoEl.className = "w-full h-full object-cover rounded-full shadow-inner border-4 border-emerald-100 bg-slate-200 mirror-video transition-all duration-500";
-                        statusIcon.classList.remove('hidden');
+                        UI.show('camera-status');
 
                         backdrop.classList.add('opacity-0');
-                        setTimeout(() => backdrop.classList.add('hidden'), 300);
+                        setTimeout(() => UI.hide('camera-backdrop'), 300);
 
                         resolve(blob);
                     }
@@ -719,22 +790,18 @@
             };
 
             const enterHandler = (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    startTimer();
-                }
+                if (e.key === 'Enter') { e.preventDefault(); startTimer(); }
             };
 
             btnStart.addEventListener('click', startTimer);
-            btnCancel.addEventListener('click', cancelTimer); // Mendaftarkan event listener tombol Batal
+            btnCancel.addEventListener('click', cancelTimer); 
             document.addEventListener('keydown', enterHandler);
         });
     }
 
     async function takeSnapshot() {
-        const video = document.getElementById('camera-stream');
-        const canvas = document.getElementById('canvas-capture');
-
+        const video = UI.el('camera-stream');
+        const canvas = UI.el('canvas-capture');
         if (!video.srcObject || video.videoWidth === 0) return null;
 
         canvas.width = video.videoWidth;
@@ -745,22 +812,14 @@
         ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        return new Promise(resolve => {
-            canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8);
-        });
+        return new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8));
     }
 
     function initLocation() {
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    userLocation.lat = position.coords.latitude;
-                    userLocation.lng = position.coords.longitude;
-                },
-                (error) => {
-                    console.warn("Gagal mendapatkan lokasi:", error.message);
-                    showToast("Akses Lokasi Ditolak", "Mohon izinkan akses lokasi agar absen lebih akurat.", "warning");
-                },
+                (position) => { userLocation.lat = position.coords.latitude; userLocation.lng = position.coords.longitude; },
+                (error) => { showToast("Akses Lokasi Ditolak", "Mohon izinkan akses lokasi agar absen lebih akurat.", "warning"); },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
@@ -769,10 +828,7 @@
     // Utilities
     function getLocalDateString() { 
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`; 
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
     }
     function formatDate(date) { return date; }
     function cleanTime(time) { return time ? time : "--"; }
@@ -813,9 +869,8 @@
     }
 
     function showToast(title, message, type = 'success') {
-        const container = document.getElementById('toast-container');
+        const container = UI.el('toast-container');
         const toast = document.createElement('div');
-        
         let borderColor = type === 'success' ? 'border-emerald-500' : (type === 'error' ? 'border-rose-500' : 'border-blue-500');
         let icon = type === 'success' ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' : (type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-rose-500"></i>' : '<i class="fa-solid fa-circle-info text-blue-500"></i>');
 
@@ -825,8 +880,7 @@
         container.appendChild(toast);
         requestAnimationFrame(() => setTimeout(() => toast.classList.remove('translate-x-full'), 10));
         setTimeout(() => {
-            toast.classList.add('translate-x-full');
-            toast.classList.add('opacity-0');
+            toast.classList.add('translate-x-full', 'opacity-0');
             setTimeout(() => toast.remove(), 300);
         }, 3500);
     }
@@ -834,15 +888,8 @@
     function initClock() {
         function updateTime() {
             const now = new Date();
-            const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':');
-            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const dateString = now.toLocaleDateString('id-ID', dateOptions);
-            
-            const clockEl = document.getElementById('live-clock');
-            const dateEl = document.getElementById('live-date');
-            
-            if (clockEl) clockEl.textContent = timeString;
-            if (dateEl) dateEl.textContent = dateString;
+            if(UI.el('live-clock')) UI.el('live-clock').textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':');
+            if(UI.el('live-date')) UI.el('live-date').textContent = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
         updateTime();
         setInterval(updateTime, 1000);
@@ -952,7 +999,7 @@
     }
    
     async function updateLiveAttendanceSummary(isLoadingSheet = false) {
-        const summaryContainer = document.getElementById('daily-attendance-summary');
+        const summaryContainer = UI.el('daily-attendance-summary');
         if (!summaryContainer) return;
         
         summaryContainer.classList.remove('hidden');
@@ -1028,13 +1075,13 @@
     }
 
     let typingTimer;
-    document.getElementById('employee-code-input').addEventListener('input', (e) => {
+    UI.el('employee-code-input').addEventListener('input', (e) => {
         clearTimeout(typingTimer);
         const code = e.target.value.toUpperCase();
-        const btnCheckOut = document.getElementById('btn-check-out');
-        const resolveText = document.getElementById('employee-resolved-name');
+        const btnCheckOut = UI.el('btn-check-out');
+        const resolveText = UI.el('employee-resolved-name');
         
-        btnCheckOut.classList.add('hidden');
+        UI.hide('btn-check-out');
         if (code.length === 0) {
             resolveText.textContent = "Silakan masukkan 6 digit kode Anda...";
             resolveText.className = "mt-3 text-sm text-slate-500 font-medium";
@@ -1058,13 +1105,11 @@
                 
                 if (!res.record) {
                     const imageBlob = await startCountdownAndSnap();
-                    
-                    // -- TAMBAHKAN BLOK INI --
                     if (!imageBlob) {
                         e.target.value = ""; 
                         resolveText.textContent = "Silakan masukkan 6 digit kode Anda...";
                         resolveText.className = "mt-3 text-sm text-slate-500 font-medium transition-all duration-300";
-                        return; // Hentikan aksi karena dibatalkan
+                        return; 
                     }
                     const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
                     await apiService.createRecord(res.user.code, res.user.name, time);
@@ -1079,7 +1124,7 @@
                     if (currentUser) loadCalendarData(currentUser); 
                     
                 } else if (!res.record.checkOut || res.record.checkOut === '--') {
-                    btnCheckOut.classList.remove('hidden');
+                    UI.show('btn-check-out');
                     btnCheckOut.disabled = false;
                     btnCheckOut.dataset.code = code; 
                     btnCheckOut.dataset.username = res.user.username;
@@ -1105,49 +1150,39 @@
         }, 500);
     });
 
-    document.getElementById('btn-check-out').onclick = async function() {
+    UI.el('btn-check-out').onclick = async function() {
         const code = this.dataset.code;
         const username = this.dataset.username;
         const fallbackName = cachedRecords.find(r => r.employeeCode === code)?.employeeName || "Karyawan";
         const name = this.dataset.name || fallbackName;
-        
         if (!code) return;
-        const btn = this;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
-        btn.disabled = true;
 
         const imageBlob = await startCountdownAndSnap();
-        
-        // -- TAMBAHKAN BLOK INI --
-        if (!imageBlob) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            return; // Hentikan aksi karena dibatalkan
-        }
-        const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
-        await apiService.checkOut(code, time);
-        
-        sebutkanNama(`Terima kasih, ${username}, hati-hati di jalan.`);
-        showToast("Berhasil Keluar!", `Terima kasih atas kerja keras Anda hari ini. Waktu: ${time}`, "success");
-        
-        document.getElementById('employee-code-input').value = "";
-        document.getElementById('employee-resolved-name').textContent = "Silakan masukkan 6 digit kode Anda...";
-        document.getElementById('employee-resolved-name').className = "mt-3 text-sm text-slate-500 font-medium";
-        
-        btn.classList.add('hidden'); 
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        
-        await refreshDashboardData();
-        sendTelegramNotification(name, "Absen Pulang", imageBlob);
-        if (currentUser) loadCalendarData(currentUser); 
-        checkLoginState(true); 
+        if (!imageBlob) return; 
+
+        await withLoading('btn-check-out', 'Menyimpan...', async () => {
+            const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+            await apiService.checkOut(code, time);
+            
+            sebutkanNama(`Terima kasih, ${username}, hati-hati di jalan.`);
+            showToast("Berhasil Keluar!", `Terima kasih atas kerja keras Anda hari ini. Waktu: ${time}`, "success");
+            
+            UI.el('employee-code-input').value = "";
+            UI.el('employee-resolved-name').textContent = "Silakan masukkan 6 digit kode Anda...";
+            UI.el('employee-resolved-name').className = "mt-3 text-sm text-slate-500 font-medium";
+            
+            UI.hide('btn-check-out');
+            
+            await refreshDashboardData();
+            sendTelegramNotification(name, "Absen Pulang", imageBlob);
+            if (currentUser) loadCalendarData(currentUser); 
+            checkLoginState(true); 
+        });
     };
 
     function introduceLogoutFeature() {
         if (localStorage.getItem('logout_intro_shown')) return;
-        const btnLogout = document.getElementById('btn-logout');
+        const btnLogout = UI.el('btn-logout');
         if (!btnLogout || btnLogout.classList.contains('hidden')) return;
 
         btnLogout.classList.add('relative', 'ring-2', 'ring-rose-400', 'ring-offset-2', 'bg-rose-50');
@@ -1191,7 +1226,7 @@
             tooltip.classList.remove('opacity-100', 'translate-y-0');
             tooltip.classList.add('opacity-0', 'translate-y-2');
             btnLogout.classList.remove('relative', 'ring-2', 'ring-rose-400', 'ring-offset-2', 'bg-rose-50');
-            const dot = document.getElementById('logout-notif-dot');
+            const dot = UI.el('logout-notif-dot');
             if (dot) dot.remove();
             localStorage.setItem('logout_intro_shown', 'true');
             setTimeout(() => tooltip.remove(), 300);
@@ -1199,401 +1234,299 @@
     }
 
     async function checkLoginState(isAfterLogout = false) {
-        const manualSection = document.getElementById('manual-input-section');
-        const loggedInSection = document.getElementById('logged-in-section');
-        const btnLogin = document.getElementById('btn-login-modal');
-        const btnLogout = document.getElementById('btn-logout');
-        const welcomeMsg = document.getElementById('welcome-message');
-        const statusText = document.getElementById('attendance-status-text');
-        const btnCheckIn = document.getElementById('btn-auto-check-in');
-        const btnCheckOut = document.getElementById('btn-check-out');
-        const loginModal = document.getElementById('login-modal');
-        const btnCloseLogin = document.getElementById('btn-close-login');
-        
-        const profileAdminContainer = document.getElementById('profile-admin-container');
-        const appTabsContainer = document.getElementById('app-tabs-container');
-
         const isAppMode = window.matchMedia('(display-mode: standalone)').matches || 
-            window.matchMedia('(display-mode: fullscreen)').matches || 
-            window.matchMedia('(display-mode: minimal-ui)').matches || 
-            window.navigator.standalone === true || 
-            document.referrer.includes('android-app://') ||
-            window.location.search.includes('mode=pwa');
+            window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: minimal-ui)').matches || 
+            window.navigator.standalone === true || document.referrer.includes('android-app://') || window.location.search.includes('mode=pwa');
 
         if (currentUser) {
-            manualSection.classList.add('hidden');
-            loggedInSection.classList.remove('hidden');
-            loggedInSection.classList.add('flex');
+            if (!sessionStorage.getItem('app_unlocked')) {
+                try {
+                    const { data: dbUser, error } = await supabaseClient.from('employees').select('wa_number').eq('code', currentUser.code).single();
+                    if (error) throw error;
+                    if (dbUser && dbUser.wa_number) {
+                        sessionStorage.setItem('app_unlocked', 'true');
+                        currentUser.wa_number = dbUser.wa_number;
+                        localStorage.setItem('attendance_user', JSON.stringify(currentUser));
+                    } else {
+                        if (typeof startWaOtpVerification === "function") startWaOtpVerification();
+                        return; 
+                    }
+                } catch (error) {
+                    if (typeof startWaOtpVerification === "function") startWaOtpVerification();
+                    return;
+                }
+            }
+
+            UI.hide('manual-input-section');
+            UI.toggleFlex('logged-in-section', true);
+            UI.hide('btn-login-modal'); UI.show('btn-logout');
             
-            btnLogin.classList.add('hidden');
-            btnLogout.classList.remove('hidden');
-                  
+            const loginModal = UI.el('login-modal');
             loginModal.classList.add('opacity-0');
-            setTimeout(() => loginModal.classList.add('hidden'), 300);
+            setTimeout(() => UI.hide('login-modal'), 300);
             
-            profileAdminContainer.classList.remove('hidden');
-            appTabsContainer.classList.remove('hidden');
-            appTabsContainer.classList.add('flex');
+            UI.show('profile-admin-container');
+            UI.toggleFlex('app-tabs-container', true);
             
             const storedSlips = JSON.parse(localStorage.getItem('attendance_slips') || '[]');
             initDashboard(currentUser, storedSlips);
 
-            welcomeMsg.textContent = `Halo, ${currentUser.name}!`;
+            UI.el('welcome-message').textContent = `Halo, ${currentUser.name}!`;
             
             const today = getLocalDateString();
             const { data: record } = await supabaseClient.from('attendance').select('*').eq('employeeCode', currentUser.code).eq('date', today).maybeSingle();
 
-            btnCheckIn.classList.add('hidden');
-            btnCheckOut.classList.add('hidden');
+            UI.hide('btn-auto-check-in'); UI.hide('btn-check-out');
 
             if (!record) {
-                statusText.innerHTML = `<span class="text-amber-500"><i class="fa-solid fa-circle-exclamation"></i> Anda belum absen masuk hari ini.</span>`;
-                btnCheckIn.classList.remove('hidden');
+                UI.el('attendance-status-text').innerHTML = `<span class="text-amber-500"><i class="fa-solid fa-circle-exclamation"></i> Anda belum absen masuk hari ini.</span>`;
+                UI.show('btn-auto-check-in');
 
-                if (!localStorage.getItem('logout_intro_shown')) {
-                    setTimeout(() => introduceLogoutFeature(), 300);
-                } else {
+                if (!localStorage.getItem('logout_intro_shown')) setTimeout(() => introduceLogoutFeature(), 300);
+                else {
                     if (!isAutoCheckInRunning) {
                         isAutoCheckInRunning = true; 
-                        let checkAttempts = 0;
-                        const maxAttempts = 25; 
+                        let checkAttempts = 0; const maxAttempts = 25; 
                         const checkCameraInterval = setInterval(() => {
-                            const videoEl = document.getElementById('camera-stream');
-                            const isCameraReady = videoEl && videoEl.srcObject && videoEl.srcObject.getVideoTracks().length > 0;
-                            if (isCameraReady) {
+                            const videoEl = UI.el('camera-stream');
+                            if (videoEl && videoEl.srcObject && videoEl.srcObject.getVideoTracks().length > 0) {
                                 clearInterval(checkCameraInterval);
-                                const autoBtn = document.getElementById('btn-auto-check-in');
+                                const autoBtn = UI.el('btn-auto-check-in');
                                 if (autoBtn) autoBtn.click();
                             } else {
                                 checkAttempts++;
-                                if (checkAttempts >= maxAttempts) {
-                                    clearInterval(checkCameraInterval);
-                                    isAutoCheckInRunning = false; 
-                                }
+                                if (checkAttempts >= maxAttempts) { clearInterval(checkCameraInterval); isAutoCheckInRunning = false; }
                             }
                         }, 200);
                     }
                 }
             } else if (!record.checkOut || record.checkOut === '--') {
                 isAutoCheckInRunning = false; 
-                statusText.innerHTML = `<span class="text-emerald-500"><i class="fa-solid fa-clock"></i> Anda sudah absen masuk pada ${record.checkIn}.</span>`;
-                btnCheckOut.classList.remove('hidden');
+                UI.el('attendance-status-text').innerHTML = `<span class="text-emerald-500"><i class="fa-solid fa-clock"></i> Anda sudah absen masuk pada ${record.checkIn}.</span>`;
                 
+                const btnCheckOut = UI.el('btn-check-out');
+                UI.show('btn-check-out');
                 btnCheckOut.dataset.code = currentUser.code;
                 btnCheckOut.dataset.username = currentUser.username;
                 btnCheckOut.dataset.name = currentUser.name;
                 setTimeout(() => introduceLogoutFeature(), 300);
             } else {
                 isAutoCheckInRunning = false; 
-                statusText.innerHTML = `<span class="text-blue-500"><i class="fa-solid fa-circle-check"></i> Absensi hari ini telah selesai.</span>`;
+                UI.el('attendance-status-text').innerHTML = `<span class="text-blue-500"><i class="fa-solid fa-circle-check"></i> Absensi hari ini telah selesai.</span>`;
                 setTimeout(() => introduceLogoutFeature(), 300);
             }
         } else {
-            loggedInSection.classList.add('hidden');
-            loggedInSection.classList.remove('flex');
-            btnLogin.classList.remove('hidden');
-            btnLogout.classList.add('hidden');
-            btnCheckIn.classList.add('hidden');
-            btnCheckOut.classList.add('hidden');
-            
-            profileAdminContainer.classList.add('hidden');
-            appTabsContainer.classList.add('hidden');
-            appTabsContainer.classList.remove('flex');
+            UI.toggleFlex('logged-in-section', false);
+            UI.show('btn-login-modal'); UI.hide('btn-logout');
+            UI.hide('btn-auto-check-in'); UI.hide('btn-check-out');
+            UI.hide('profile-admin-container');
+            UI.toggleFlex('app-tabs-container', false);
             switchAppTab('absensi');
 
+            const loginModal = UI.el('login-modal');
             if (isAppMode && !isAfterLogout) {
-                manualSection.classList.add('hidden'); 
-                loginModal.classList.remove('hidden');
+                UI.hide('manual-input-section'); 
+                UI.show('login-modal');
                 setTimeout(() => loginModal.classList.remove('opacity-0'), 10);
-                if (btnCloseLogin) btnCloseLogin.classList.add('hidden');
+                UI.hide('btn-close-login');
             } else {
-                manualSection.classList.remove('hidden');
-                if (btnCloseLogin) btnCloseLogin.classList.remove('hidden');
+                UI.show('manual-input-section');
+                UI.show('btn-close-login');
             }
         }
     }
 
-    const loginModal = document.getElementById('login-modal');
-    document.getElementById('btn-login-modal').onclick = () => {
-        loginModal.classList.remove('hidden');
-        setTimeout(() => loginModal.classList.remove('opacity-0'), 10);
+    UI.el('btn-login-modal').onclick = () => {
+        UI.show('login-modal');
+        setTimeout(() => UI.el('login-modal').classList.remove('opacity-0'), 10);
     };
-    document.getElementById('btn-close-login').onclick = () => {
-        loginModal.classList.add('opacity-0');
-        setTimeout(() => loginModal.classList.add('hidden'), 300);
-    };
-
-    document.getElementById('btn-submit-login').onclick = async () => {
-        const userIn = document.getElementById('login-username').value.trim();
-        const passIn = document.getElementById('login-password').value.trim();
-        const btn = document.getElementById('btn-submit-login');
-        
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Loading...`;
-        
-        const res = await apiService.loginUser(userIn, passIn);
-        
-        if (res.success) {
-            currentUser = res.user;
-            localStorage.setItem('attendance_user', JSON.stringify(currentUser));
-            
-            try {
-                const { data: slips } = await supabaseClient.from('gaji').select('*').eq('noid', currentUser.code).order('id', { ascending: false });
-                localStorage.setItem('attendance_slips', JSON.stringify(slips || []));
-                initDashboard(currentUser, slips || []);
-            } catch(e) { console.error(e); }
-            
-            showToast("Login Berhasil", `Selamat datang, ${currentUser.name}`, "success");
-            document.getElementById('btn-close-login').click();
-            
-            document.getElementById('login-username').value = '';
-            document.getElementById('login-password').value = '';
-            btn.innerHTML = 'Login';
-            checkLoginState();
-        } else {
-            showToast("Login Gagal", "Username atau password salah.", "error");
-            btn.innerHTML = "Login";
-        }
+    
+    UI.el('btn-close-login').onclick = () => {
+        UI.el('login-modal').classList.add('opacity-0');
+        setTimeout(() => UI.hide('login-modal'), 300);
     };
 
-    document.getElementById('btn-logout').onclick = () => {
+    UI.el('btn-submit-login').onclick = async () => {
+        const userIn = UI.el('login-username').value.trim();
+        const passIn = UI.el('login-password').value.trim();
+        
+        await withLoading('btn-submit-login', 'Loading...', async () => {
+            const res = await apiService.loginUser(userIn, passIn);
+            if (res.success) {
+                currentUser = res.user;
+                localStorage.setItem('attendance_user', JSON.stringify(currentUser));
+                
+                try {
+                    const { data: slips } = await supabaseClient.from('gaji').select('*').eq('noid', currentUser.code).order('id', { ascending: false });
+                    localStorage.setItem('attendance_slips', JSON.stringify(slips || []));
+                    initDashboard(currentUser, slips || []);
+                } catch(e) {}
+                
+                showToast("Login Berhasil", `Selamat datang, ${currentUser.name}`, "success");
+                UI.el('btn-close-login').click();
+                UI.el('login-username').value = '';
+                UI.el('login-password').value = '';
+                checkLoginState();
+            } else {
+                showToast("Login Gagal", "Username atau password salah.", "error");
+            }
+        });
+    };
+
+    UI.el('btn-logout').onclick = () => {
         currentUser = null;
         localStorage.removeItem('attendance_user');
         localStorage.removeItem('attendance_slips');
         showToast("Logout", "Anda telah keluar ke mode manual.", "info");
         
-        document.getElementById('slips-container').innerHTML = '';
-        document.getElementById('calendarView').innerHTML = '';
-        document.getElementById('attendanceSummary').innerText = '-';
-        document.getElementById('diffHoursDisplay').innerText = '-';
+        UI.el('slips-container').innerHTML = '';
+        UI.el('calendarView').innerHTML = '';
+        UI.el('attendanceSummary').innerText = '-';
+        UI.el('diffHoursDisplay').innerText = '-';
         
-        AppState.user = null;
-        AppState.attendance = [];
-        AppState.holidays.clear();
-        AppState.admin.employees = {};
-        AppState.admin.attendance = [];
+        AppState.user = null; AppState.attendance = []; AppState.holidays.clear();
+        AppState.admin.employees = {}; AppState.admin.attendance = [];
         
         checkLoginState(true); 
     };
 
-    document.getElementById('btn-auto-check-in').onclick = async () => {
-        const btn = document.getElementById('btn-auto-check-in');
-        btn.disabled = true;
-        
+    UI.el('btn-auto-check-in').onclick = async () => {
         const imageBlob = await startCountdownAndSnap();
-        
-        // -- TAMBAHKAN BLOK INI --
-        if (!imageBlob) {
-            btn.disabled = false;
-            return; // Hentikan aksi karena dibatalkan
-        }
-        const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
-        
-        await apiService.createRecord(currentUser.code, currentUser.name, time);
-        
-        sebutkanNama(`Selamat bekerja, ${currentUser.username}`);
-        showToast("Berhasil Masuk!", `Selamat bekerja. Waktu: ${time}`, "success");
-        
-        await refreshDashboardData();
-        sendTelegramNotification(currentUser.name, "Absen Masuk", imageBlob); 
-        if (currentUser) loadCalendarData(currentUser); 
-        
-        btn.disabled = false;
-        checkLoginState(); 
+        if (!imageBlob) return; 
+
+        await withLoading('btn-auto-check-in', 'Menyimpan...', async () => {
+            const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+            await apiService.createRecord(currentUser.code, currentUser.name, time);
+            
+            sebutkanNama(`Selamat bekerja, ${currentUser.username}`);
+            showToast("Berhasil Masuk!", `Selamat bekerja. Waktu: ${time}`, "success");
+            
+            await refreshDashboardData();
+            sendTelegramNotification(currentUser.name, "Absen Masuk", imageBlob); 
+            if (currentUser) loadCalendarData(currentUser); 
+            checkLoginState(); 
+        });
     };
 
     function sebutkanNama(teks) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel(); 
             const ucapan = new SpeechSynthesisUtterance(teks);
-            ucapan.lang = 'id-ID'; 
-            ucapan.rate = 0.9;     
-            ucapan.pitch = 1.0;    
+            ucapan.lang = 'id-ID'; ucapan.rate = 0.9; ucapan.pitch = 1.0;    
             window.speechSynthesis.speak(ucapan);
         }
     }
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log('ServiceWorker registration failed: ', err));
-        });
+        window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(err => console.log('SW err: ', err)));
     }
 
-    // Modal OTP & WA Lupa Password
     function openForgotPassword() {
-        document.getElementById('login-modal').classList.add('hidden');
-        document.getElementById('forgot-password-modal').classList.remove('hidden');
-        document.getElementById('fp-state-1').classList.remove('hidden');
-        document.getElementById('fp-state-2').classList.add('hidden');
-        document.getElementById('fp-username').value = "";
-        document.getElementById('fp-error').classList.add('hidden');
+        UI.hide('login-modal');
+        UI.show('forgot-password-modal');
+        UI.show('fp-state-1');
+        UI.hide('fp-state-wa');
+        UI.hide('fp-state-2');
+        UI.el('fp-username').value = "";
+        UI.hide('fp-error');
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-   function closeForgotPassword() {
-        document.getElementById('forgot-password-modal').classList.add('hidden');
-        document.getElementById('login-modal').classList.remove('hidden');
-        
-        // Hentikan timer jika modal ditutup
-        if (otpCountdownInterval) {
-            clearInterval(otpCountdownInterval);
-        }
+    function closeForgotPassword() {
+        UI.hide('forgot-password-modal');
+        UI.show('login-modal');
+        if (otpCountdownInterval) clearInterval(otpCountdownInterval);
     }
-
-    
 
     function maskPhoneNumber(phone) {
         if (!phone || phone.length < 4) return "xxxxxxxxxxx17"; 
-        const lastTwo = phone.slice(-2);
-        return 'x'.repeat(phone.length - 2) + lastTwo;
+        return 'x'.repeat(phone.length - 2) + phone.slice(-2);
     }
 
     async function sendOtpAction(e) {
         e.preventDefault();
-        const username = document.getElementById('fp-username').value.trim();
-        const btn = document.getElementById('btn-send-otp');
-        const errorEl = document.getElementById('fp-error');
-        
-        btn.disabled = true;
-        btn.innerHTML = `<div class="loader inline-block"></div>`;
-        errorEl.classList.add('hidden');
+        const username = UI.el('fp-username').value.trim();
+        UI.hide('fp-error');
 
-        try {
+        await withLoading('btn-send-otp', 'Mencari...', async () => {
             const { data, error } = await supabaseClient.from('employees').select('*').or(`username.ilike.${username},name.ilike.${username}`);
-            if (error) throw error;
-            if (!data || data.length === 0) throw new Error("Username atau Nama tidak ditemukan.");
+            if (error || !data || data.length === 0) {
+                UI.el('fp-error').innerText = "Username atau Nama tidak ditemukan.";
+                UI.show('fp-error'); return;
+            }
+            tempOtpUser = data[0];
+            if (!tempOtpUser.wa_number) {
+                UI.hide('fp-state-1'); UI.show('fp-state-wa');
+            } else await processSendFpOtp(tempOtpUser.wa_number);
+        });
+    }
 
-            const user = data[0];
-            if (!user.wa_number) throw new Error("Nomor WhatsApp belum terdaftar di sistem. Hubungi Admin/HRD.");
+    async function saveWaAndSendOtp(e) {
+        e.preventDefault();
+        let waNumber = UI.el('fp-input-wa').value.trim();
+        if (waNumber.startsWith('0')) waNumber = '62' + waNumber.substring(1);
 
-            tempOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
-            tempOtpUser = user;
-            tempOtpTimestamp = Date.now(); // Mencatat waktu (dalam milidetik) saat OTP dibuat
+        await withLoading('btn-fp-save-wa', 'Menyimpan...', async () => {
+            const { error } = await supabaseClient.from('employees').update({ wa_number: waNumber }).eq('code', tempOtpUser.code);
+            if (error) { alert("Gagal menyimpan nomor WA: " + error.message); return; }
+            tempOtpUser.wa_number = waNumber;
+            await processSendFpOtp(waNumber);
+        });
+    }
 
-            // Perbarui pesan WA agar menginformasikan batas waktu
-            const waText = `*KODE OTP E-SLIP GAJI VIP*\n\nHalo ${user.name},\nKode OTP Anda untuk reset password adalah: *${tempOtpCode}*\n\n_Catatan: Kode ini hanya berlaku selama 5 menit._\n\n_Mohon jangan berikan kode ini kepada siapapun._`;
-            const fonnteToken = 'cAswYc8237BQhnuGWdBE';
+    async function processSendFpOtp(waNumber) {
+        tempOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        tempOtpTimestamp = Date.now();
 
-            await fetch('https://api.fonnte.com/send', {
-                method: 'POST',
-                headers: {
-                    'Authorization': fonnteToken,
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams({
-                    target: user.wa_number,
-                    message: waText,
-                })
-            });
+        const waText = `*KODE OTP E-SLIP GAJI VIP*\n\nHalo ${tempOtpUser.name},\nKode OTP Anda untuk reset password adalah: *${tempOtpCode}*\n\n_Catatan: Kode ini hanya berlaku selama 5 menit._`;
+        const fonnteToken = 'cAswYc8237BQhnuGWdBE';
 
-            const maskedWa = maskPhoneNumber(user.wa_number);
-            document.getElementById('otp-info-text').innerHTML = `Kode OTP dikirim menggunakan sistem ke nomor Anda "${maskedWa}".<br><span class="block mt-1.5 pt-1.5 border-t border-emerald-200/60 text-[10px] text-emerald-700">Silakan cek pesan WA dari nomor pengirim:<br><b class="text-xs">6285823253354</b></span>`;
-            document.getElementById('fp-state-1').classList.add('hidden');
-            document.getElementById('fp-state-2').classList.remove('hidden');
+        await fetch('https://api.fonnte.com/send', {
+            method: 'POST',
+            headers: { 'Authorization': fonnteToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ target: waNumber, message: waText })
+        });
 
-            // --- TAMBAHAN LOGIKA HITUNG MUNDUR UI ---
-            const timerEl = document.getElementById('otp-timer');
-            const btnReset = document.getElementById('btn-reset-pass');
-            
-            // Reset tampilan tombol dan teks jika diulang
-            btnReset.disabled = false;
-            btnReset.className = "w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition-colors mt-2";
-            timerEl.className = "font-mono text-base";
-            
-            if (otpCountdownInterval) clearInterval(otpCountdownInterval);
-            
-            otpCountdownInterval = setInterval(() => {
-                const timeElapsed = Date.now() - tempOtpTimestamp;
-                const timeLeft = (5 * 60 * 1000) - timeElapsed; // 5 menit
-
-                if (timeLeft <= 0) {
-                    // Jika waktu habis
-                    clearInterval(otpCountdownInterval);
-                    timerEl.textContent = "KEDALUWARSA";
-                    timerEl.className = "font-black text-rose-600";
-                    
-                    // Nonaktifkan tombol simpan agar pengguna harus minta ulang
-                    btnReset.disabled = true;
-                    btnReset.className = "w-full bg-slate-300 text-slate-500 font-bold py-2.5 rounded-lg transition-colors mt-2 cursor-not-allowed";
-                } else {
-                    // Format waktu ke MM:SS
-                    const minutes = Math.floor(timeLeft / (1000 * 60));
-                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-                    timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-                }
-            }, 1000);
-            // ----------------------------------------
-
-        } catch (err) {
-            errorEl.innerText = err.message || "Terjadi kesalahan saat memproses.";
-            errorEl.classList.remove('hidden');
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Kirim Kode OTP";
-        }
+        UI.el('otp-info-text').innerHTML = `Kode OTP dikirim menggunakan sistem ke nomor Anda "${maskPhoneNumber(waNumber)}".<br><span class="block mt-1.5 pt-1.5 border-t border-emerald-200/60 text-[10px] text-emerald-700">Silakan cek pesan WA dari nomor pengirim:<br><b class="text-xs">6285823253354</b></span>`;
+        
+        UI.hide('fp-state-1'); UI.hide('fp-state-wa'); UI.show('fp-state-2');
+        if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+        otpCountdownInterval = startOtpTimer('otp-timer', 'btn-reset-pass', tempOtpTimestamp);
     }
 
    async function verifyAndResetPassword(e) {
         e.preventDefault();
-        const otpInput = document.getElementById('fp-otp').value.trim();
-        const newPass = document.getElementById('fp-new-pass').value.trim();
-        const confirmPass = document.getElementById('fp-confirm-pass').value.trim();
-        const btn = document.getElementById('btn-reset-pass');
+        const otpInput = UI.el('fp-otp').value.trim();
+        const newPass = UI.el('fp-new-pass').value.trim();
+        const confirmPass = UI.el('fp-confirm-pass').value.trim();
         
-        // --- TAMBAHAN CEK WAKTU 5 MENIT ---
-        const timeElapsed = Date.now() - tempOtpTimestamp;
-        const fiveMinutes = 5 * 60 * 1000;
-        
-        if (timeElapsed > fiveMinutes) {
-            alert("Gagal: Kode OTP sudah kedaluwarsa (lebih dari 5 menit). Silakan minta kode OTP baru.");
-            return; 
-        }
-        // ----------------------------------
-
+        if (Date.now() - tempOtpTimestamp > (5 * 60 * 1000)) { alert("Kode OTP sudah kedaluwarsa!"); return; }
         if (otpInput !== tempOtpCode) { alert("Gagal: Kode OTP yang Anda masukkan salah!"); return; }
         if (newPass !== confirmPass) { alert("Gagal: Password baru dan konfirmasi tidak cocok!"); return; }
 
-        btn.disabled = true;
-        btn.innerHTML = `<div class="loader inline-block"></div>`;
-
-        try {
-            // Update password baru ke database
+        await withLoading('btn-reset-pass', 'Menyimpan...', async () => {
             const { error } = await supabaseClient.from('employees').update({ password: newPass }).eq('code', tempOtpUser.code);
-            if (error) throw error;
+            if (error) { alert("Terjadi kesalahan sistem: " + error.message); return; }
             
             showToast("Sukses!", "Password berhasil direset. Melakukan login otomatis...", "success");
             
-            // --- PROSES AUTO LOGIN ---
-            // Melakukan verifikasi login menggunakan password yang baru
             const res = await apiService.loginUser(tempOtpUser.username, newPass);
-            
             if (res.success) {
                 currentUser = res.user;
                 localStorage.setItem('attendance_user', JSON.stringify(currentUser));
-                
                 try {
-                    // Ambil data slip gaji pengguna
                     const { data: slips } = await supabaseClient.from('gaji').select('*').eq('noid', currentUser.code).order('id', { ascending: false });
                     localStorage.setItem('attendance_slips', JSON.stringify(slips || []));
                     initDashboard(currentUser, slips || []);
-                } catch(e) { console.error(e); }
+                } catch(e) {}
                 
-                // Sembunyikan modal reset password & bersihkan interval
-                document.getElementById('forgot-password-modal').classList.add('hidden');
-                if (otpCountdownInterval) clearInterval(otpCountdownInterval);
-                
-                // checkLoginState() otomatis akan mengurus dan menutup UI login
+                closeForgotPassword();
                 checkLoginState();
             } else {
-                alert("Password berhasil diubah, namun gagal login otomatis. Silakan login secara manual.");
+                alert("Password berhasil diubah, namun gagal login otomatis. Silakan login manual.");
                 closeForgotPassword();
             }
-            
-        } catch (err) {
-            alert("Terjadi kesalahan sistem saat menyimpan password baru: " + err.message);
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Simpan Password Baru";
-        }
+        });
     }
 
     // Profil dan Settings
@@ -1601,113 +1534,79 @@
         const sessionData = localStorage.getItem("attendance_user");
         if (sessionData) {
             const sessionUser = JSON.parse(sessionData);
-            document.getElementById('new-username').value = sessionUser.username || sessionUser.name;
-            document.getElementById('new-password').value = ""; 
-            document.getElementById('confirm-new-password').value = ""; 
+            UI.el('new-username').value = sessionUser.username || sessionUser.name;
+            UI.el('new-password').value = ""; UI.el('confirm-new-password').value = ""; 
         }
-        document.getElementById('edit-profile-modal').classList.remove('hidden');
+        UI.show('edit-profile-modal');
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    function closeEditModal() {
-        document.getElementById('edit-profile-modal').classList.add('hidden');
-    }
+    function closeEditModal() { UI.hide('edit-profile-modal'); }
 
-    document.getElementById('edit-profile-form').addEventListener('submit', async (e) => {
+    UI.el('edit-profile-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newUsername = document.getElementById('new-username').value.trim();
-        const newPassword = document.getElementById('new-password').value.trim();
-        const confirmNewPassword = document.getElementById('confirm-new-password').value.trim();
-        const btnSave = document.getElementById('btn-save-profile');
-        
-        if (newPassword !== "") {
-            if (newPassword !== confirmNewPassword) {
-                alert("Gagal: Password baru dan konfirmasi password tidak cocok!");
-                return; 
-            }
-        }
+        const newUsername = UI.el('new-username').value.trim();
+        const newPassword = UI.el('new-password').value.trim();
+        if (newPassword !== "" && newPassword !== UI.el('confirm-new-password').value.trim()) { alert("Gagal: Password baru dan konfirmasi tidak cocok!"); return; }
 
-        const sessionData = localStorage.getItem("attendance_user");
-        if (!sessionData) return;
-        const sessionUser = JSON.parse(sessionData);
+        const sessionUser = JSON.parse(localStorage.getItem("attendance_user") || 'null');
+        if (!sessionUser) return;
 
-        btnSave.disabled = true;
-        btnSave.innerHTML = `<div class="loader inline-block"></div> Menyimpan...`;
-
-        try {
+        await withLoading('btn-save-profile', 'Menyimpan...', async () => {
             let updateData = { username: newUsername };
             if (newPassword !== "") updateData.password = newPassword; 
-
             const { data, error } = await supabaseClient.from('employees').update(updateData).eq('code', sessionUser.code).select();
-            if (error) throw error;
-
+            
+            if (error) { alert("Gagal memperbarui profil."); return; }
             if (data && data.length > 0) {
                 currentUser = data[0];
                 localStorage.setItem("attendance_user", JSON.stringify(currentUser));
-                document.getElementById('profile-nama').innerText = currentUser.name || currentUser.username;
+                UI.el('profile-nama').innerText = currentUser.name || currentUser.username;
                 alert("Profil berhasil diperbarui!");
                 closeEditModal();
             }
-        } catch (error) {
-            console.error("Gagal update profil:", error);
-            alert("Terjadi kesalahan saat memperbarui profil. Pastikan koneksi aman.");
-        } finally {
-            btnSave.disabled = false;
-            btnSave.innerText = "Simpan Perubahan";
-        }
+        });
     });
 
     // Dashboard Render Data & Admin Logic
     async function initDashboard(user, slips) {
         renderDashboard(user, slips);
-        const adminPanel = document.getElementById('admin-panel');
         if (ALLOWED_ADMIN_ROLES.includes(user.position)) {
-            adminPanel.classList.remove('hidden');
+            UI.show('admin-panel');
             await prepareAdminData();
             populateAdminDropdown(user.code);
             updateManualButtonState();
             if (typeof lucide !== 'undefined') lucide.createIcons();
-        } else {
-            adminPanel.classList.add('hidden');
-        }
+        } else UI.hide('admin-panel');
     }
 
     function renderDashboard(user, slips) {
         const namaKaryawan = user.name || user.username || 'Karyawan';
-        document.getElementById('profile-nama').innerText = namaKaryawan;
-        document.getElementById('profile-jabatan').innerText = user.position || "-"; 
-        document.getElementById('profile-noid').innerText = "ID: " + user.code;
-        document.getElementById('profile-initial').innerText = namaKaryawan.charAt(0).toUpperCase();
-        document.getElementById('total-slip-badge').innerText = slips.length + " Slip";
+        UI.el('profile-nama').innerText = namaKaryawan;
+        UI.el('profile-jabatan').innerText = user.position || "-"; 
+        UI.el('profile-noid').innerText = "ID: " + user.code;
+        UI.el('profile-initial').innerText = namaKaryawan.charAt(0).toUpperCase();
+        UI.el('total-slip-badge').innerText = slips.length + " Slip";
 
-        const btnSettings = document.getElementById('btn-settings-profile');
-        const sessionData = localStorage.getItem("attendance_user");
-        if (sessionData && btnSettings) {
-            const sessionUser = JSON.parse(sessionData);
-            if (user.code !== sessionUser.code) btnSettings.classList.add('hidden');
-            else btnSettings.classList.remove('hidden');
+        const btnSettings = UI.el('btn-settings-profile');
+        const sessionUser = JSON.parse(localStorage.getItem("attendance_user") || 'null');
+        if (sessionUser && btnSettings) {
+            user.code !== sessionUser.code ? UI.hide('btn-settings-profile') : UI.show('btn-settings-profile');
         }
 
         loadCalendarData(user);
 
-        const container = document.getElementById('slips-container');
+        const container = UI.el('slips-container');
         if (slips.length === 0) {
             container.innerHTML = `<div class="text-center bg-white rounded-xl p-8 border border-slate-100 shadow-sm"><i data-lucide="file-x" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i><p class="text-slate-500 text-sm">Belum ada riwayat slip gaji.</p></div>`;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-            return; 
+            if (typeof lucide !== 'undefined') lucide.createIcons(); return; 
         }
 
         let slipsHTML = '';
         slips.forEach((slip, index) => {
-            const lembur = slip.lembur || 0;
-            const bonus = slip.bonus || 0;
-            const potongan = slip.potongan || 0;
-            const gajiPokok = slip.gaji_pokok || 0;
-            const totalGaji = slip.total_gaji || 0;
-
-            const lemburRow = lembur > 0 ? `<div class="flex justify-between items-center"><span class="text-slate-600">Lembur</span><span class="font-medium text-blue-600">+ ${formatRupiah(lembur)}</span></div>` : '';
-            const bonusRow = bonus > 0 ? `<div class="flex justify-between items-center"><span class="text-slate-600">Bonus Kehadiran</span><span class="font-medium text-emerald-600">+ ${formatRupiah(bonus)}</span></div>` : '';
-            const potonganRow = potongan > 0 ? `<div class="flex justify-between items-center"><span class="text-slate-600">Potongan</span><span class="font-medium text-red-500">- ${formatRupiah(potongan)}</span></div>` : '';
+            const lemburRow = slip.lembur > 0 ? `<div class="flex justify-between items-center"><span class="text-slate-600">Lembur</span><span class="font-medium text-blue-600">+ ${formatRupiah(slip.lembur)}</span></div>` : '';
+            const bonusRow = slip.bonus > 0 ? `<div class="flex justify-between items-center"><span class="text-slate-600">Bonus Kehadiran</span><span class="font-medium text-emerald-600">+ ${formatRupiah(slip.bonus)}</span></div>` : '';
+            const potonganRow = slip.potongan > 0 ? `<div class="flex justify-between items-center"><span class="text-slate-600">Potongan</span><span class="font-medium text-red-500">- ${formatRupiah(slip.potongan)}</span></div>` : '';
 
             slipsHTML += `
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-4">
@@ -1719,7 +1618,7 @@
                         <div class="flex items-center gap-3 text-right">
                             <div class="flex flex-col">
                                 <span class="text-xs text-slate-500 mb-1">Total Diterima</span>
-                                <span class="font-bold text-emerald-600">${formatRupiah(totalGaji)}</span>
+                                <span class="font-bold text-emerald-600">${formatRupiah(slip.total_gaji || 0)}</span>
                             </div>
                             <div class="bg-blue-100 text-blue-600 p-1.5 rounded-md w-7 h-7 flex items-center justify-center">
                                 <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200" id="icon-slip-${index}"></i>
@@ -1740,12 +1639,12 @@
                             </div>
                             <hr class="border-slate-100">
                             <div class="space-y-2 text-sm">
-                                <div class="flex justify-between items-center"><span class="text-slate-600">Gaji Pokok</span><span class="font-medium text-slate-800">${formatRupiah(gajiPokok)}</span></div>
+                                <div class="flex justify-between items-center"><span class="text-slate-600">Gaji Pokok</span><span class="font-medium text-slate-800">${formatRupiah(slip.gaji_pokok || 0)}</span></div>
                                 ${lemburRow}${bonusRow}${potonganRow}
                             </div>
                             <div class="mt-4 pt-3 border-t border-dashed border-slate-300 flex justify-between items-center">
                                 <span class="font-bold text-slate-800">Total Gaji Bersih</span>
-                                <span class="text-lg font-bold text-emerald-600">${formatRupiah(totalGaji)}</span>
+                                <span class="text-lg font-bold text-emerald-600">${formatRupiah(slip.total_gaji || 0)}</span>
                             </div>
                         </div>
                     </div>
@@ -1755,17 +1654,11 @@
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    function toggleDetails(id) {
-        const el = document.getElementById(id);
-        const icon = document.getElementById('icon-' + id);
-        if (el.classList.contains('hidden')) {
-            el.classList.remove('hidden');
-            icon.classList.add('rotate-180');
-        } else {
-            el.classList.add('hidden');
-            icon.classList.remove('rotate-180');
-        }
-    }
+    window.toggleDetails = function(id) {
+        const el = UI.el(id); const icon = UI.el('icon-' + id);
+        if (el.classList.contains('hidden')) { UI.show(id); icon.classList.add('rotate-180'); } 
+        else { UI.hide(id); icon.classList.remove('rotate-180'); }
+    };
 
     async function loadCalendarData(user) {
         AppState.user = user;
@@ -1774,106 +1667,69 @@
                 supabaseClient.from('attendance').select('date, "employeeCode", "checkIn", "checkOut"').eq('employeeCode', user.code),
                 supabaseClient.from('holidays').select('start_date, end_date')
             ]);
-            AppState.attendance = attendance || [];
-            AppState.holidays.clear();
+            AppState.attendance = attendance || []; AppState.holidays.clear();
             
             (holidays || []).forEach(h => {
                 const startStr = h.start_date.split(' ')[0].split('T')[0]; 
                 const endStr = (h.end_date || h.start_date).split(' ')[0].split('T')[0];
-                let dStart = new Date(startStr + 'T00:00:00Z');
-                let dEnd = new Date(endStr + 'T00:00:00Z');
-                for (let d = new Date(dStart); d <= dEnd; d.setUTCDate(d.getUTCDate() + 1)) {
-                    AppState.holidays.add(d.toISOString().split('T')[0]);
-                }
+                let dStart = new Date(startStr + 'T00:00:00Z'), dEnd = new Date(endStr + 'T00:00:00Z');
+                for (let d = new Date(dStart); d <= dEnd; d.setUTCDate(d.getUTCDate() + 1)) AppState.holidays.add(d.toISOString().split('T')[0]);
             });
             updatePeriods(); 
-        } catch(e) { console.error("Gagal memuat data kalender:", e); }
+        } catch(e) {}
     }
 
     function updatePeriods() {
-        const filter = document.getElementById('periodFilter');
-        let optionsHTML = ''; 
-        const start = parseStartDate(AppState.user?.start_date);
-        const todayUTC = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
+        const filter = UI.el('periodFilter'); let optionsHTML = ''; 
+        const start = parseStartDate(AppState.user?.start_date), todayUTC = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
         let currentPeriodIdx = 0;
-
         for (let i = 0; i < 12; i++) {
             const dStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, start.getUTCDate()));
             const dEnd = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth() + 1, dStart.getUTCDate() - 1));
-            const label = `Periode ${dStart.getUTCDate()} ${dStart.toLocaleString('id-ID', {month:'short', timeZone: 'UTC'})} - ${dEnd.getUTCDate()} ${dEnd.toLocaleString('id-ID', {month:'short', timeZone: 'UTC'})} ${dEnd.getUTCFullYear()}`;
             if (todayUTC >= dStart) currentPeriodIdx = i;
-            optionsHTML += `<option value="${i}">${label}</option>`;
+            optionsHTML += `<option value="${i}">Periode ${dStart.getUTCDate()} ${dStart.toLocaleString('id-ID', {month:'short', timeZone: 'UTC'})} - ${dEnd.getUTCDate()} ${dEnd.toLocaleString('id-ID', {month:'short', timeZone: 'UTC'})} ${dEnd.getUTCFullYear()}</option>`;
         }
-        filter.innerHTML = optionsHTML; 
-        filter.value = currentPeriodIdx; 
-        renderCalendar();
+        filter.innerHTML = optionsHTML; filter.value = currentPeriodIdx; renderCalendar();
     }
 
     function renderCalendar() {
-        const kary = AppState.user;
-        if (!kary) return; 
-        
-        const periodIdx = parseInt(document.getElementById('periodFilter').value) || 0;
-        const view = document.getElementById('calendarView');
-        let calendarHTML = ''; 
-
+        const kary = AppState.user; if (!kary) return; 
+        const periodIdx = parseInt(UI.el('periodFilter').value) || 0;
+        const view = UI.el('calendarView'); let calendarHTML = ''; 
         const start = parseStartDate(kary.start_date);
         const isPartTime = !!(kary.position && String(kary.position).toLowerCase().replace(/-/g, ' ').includes('part time'));
         
-        const legPartTime1 = document.getElementById('legenda-part-time-1');
-        const legPartTime2 = document.getElementById('legenda-part-time-2');
-        if (isPartTime) {
-            if(legPartTime1) legPartTime1.classList.replace('hidden', 'flex');
-            if(legPartTime2) legPartTime2.classList.replace('hidden', 'flex');
-        } else {
-            if(legPartTime1) legPartTime1.classList.replace('flex', 'hidden');
-            if(legPartTime2) legPartTime2.classList.replace('flex', 'hidden');
-        }
+        UI.toggleFlex('legenda-part-time-1', isPartTime); UI.toggleFlex('legenda-part-time-2', isPartTime);
 
-        const shiftValue = parseInt(kary.shift_type) || 1;
-        const shiftDays = shiftValue === 2 ? [4, 5, 6] : [1, 2, 3];
+        const shiftDays = parseInt(kary.shift_type) === 2 ? [4, 5, 6] : [1, 2, 3];
         const jamKerja = parseFloat(kary.working_hours) || 8;
-
-        const now = new Date();
-        const todayUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+        const now = new Date(), todayUTC = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
         const dStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + periodIdx, start.getUTCDate()));
         const dEnd = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth() + 1, dStart.getUTCDate() - 1));
 
         const daysInPeriod = Math.round((dEnd - dStart) / (1000 * 60 * 60 * 24)) + 1;
         const dailyData = {};
-        AppState.attendance.forEach(r => {
-            dailyData[r.date] = { jam: { masuk: (r.checkIn && r.checkIn !== '--') ? r.checkIn : null, keluar: (r.checkOut && r.checkOut !== '--') ? r.checkOut : null } };
-        });
+        AppState.attendance.forEach(r => { dailyData[r.date] = { jam: { masuk: (r.checkIn && r.checkIn !== '--') ? r.checkIn : null, keluar: (r.checkOut && r.checkOut !== '--') ? r.checkOut : null } }; });
 
         let wajibDaysSet = new Set(), coveredDaysSet = new Set();
         if (isPartTime) {
             let weeks = [], currentWeek = { targetDays: [], attendedDays: [] };
             for (let i = 0; i < daysInPeriod; i++) {
                 const d = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), dStart.getUTCDate() + i));
-                const dateStr = d.toISOString().split('T')[0];
-                const dayOfWeek = d.getUTCDay();
-                const isLibur = AppState.holidays.has(dateStr);
-                const hasMasuk = dailyData[dateStr] && (dailyData[dateStr].jam.masuk || dailyData[dateStr].jam.keluar);
+                const dateStr = d.toISOString().split('T')[0], dayOfWeek = d.getUTCDay();
+                const isLibur = AppState.holidays.has(dateStr), hasMasuk = dailyData[dateStr] && (dailyData[dateStr].jam.masuk || dailyData[dateStr].jam.keluar);
                 
                 if (!isLibur && shiftDays.includes(dayOfWeek)) currentWeek.targetDays.push(dateStr);
                 if (hasMasuk) currentWeek.attendedDays.push(dateStr);
-                
-                if (dayOfWeek === 0 || i === daysInPeriod - 1) {
-                    weeks.push(currentWeek);
-                    currentWeek = { targetDays: [], attendedDays: [] };
-                }
+                if (dayOfWeek === 0 || i === daysInPeriod - 1) { weeks.push(currentWeek); currentWeek = { targetDays: [], attendedDays: [] }; }
             }
-            
             let balanceSurplus = 0; 
             weeks.forEach(w => {
                 const attendedOnTarget = w.targetDays.filter(td => w.attendedDays.includes(td)).length;
                 let availableSurplus = Math.max(0, balanceSurplus) + (w.attendedDays.length - attendedOnTarget);
                 w.targetDays.forEach(td => {
-                    if (availableSurplus > 0 && !w.attendedDays.includes(td)) {
-                        coveredDaysSet.add(td); availableSurplus--; 
-                    } else {
-                        wajibDaysSet.add(td);
-                    }
+                    if (availableSurplus > 0 && !w.attendedDays.includes(td)) { coveredDaysSet.add(td); availableSurplus--; } 
+                    else wajibDaysSet.add(td);
                 });
                 balanceSurplus = balanceSurplus + w.attendedDays.length - w.targetDays.length;
             });
@@ -1881,60 +1737,40 @@
 
         let totalDurasi = 0, hariMasuk = 0, totalHariKerja = 0, hariBolos = 0, dataLengkap = true;
         const formatWaktu = (waktu) => waktu ? (waktu.split(':').length >= 2 ? `${parseInt(waktu.split(':')[0])}:${waktu.split(':')[1]}` : waktu) : "";
-        for(let i = 0; i < dStart.getUTCDay(); i++) calendarHTML += `<div class="p-1 md:p-2 rounded-lg bg-transparent min-h-[60px] md:min-h-[85px]"></div>`;
+        for(let i = 0; i < dStart.getUTCDay(); i++) calendarHTML += `<div class="p-1 md:p-2 rounded-lg min-h-[60px] md:min-h-[85px]"></div>`;
 
         for (let i = 0; i < daysInPeriod; i++) {
             const d = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), dStart.getUTCDate() + i));
-            const dateStr = d.toISOString().split('T')[0];
-            const data = dailyData[dateStr];
+            const dateStr = d.toISOString().split('T')[0], data = dailyData[dateStr];
             const isAhad = d.getUTCDay() === 0, dayOfWeek = d.getUTCDay(), isLibur = AppState.holidays.has(dateStr);
             const hasMasuk = data && data.jam.masuk, hasKeluar = data && data.jam.keluar, attendedAny = hasMasuk || hasKeluar;
-            
             const isWajib = isPartTime && wajibDaysSet.has(dateStr), isCovered = isPartTime && coveredDaysSet.has(dateStr), isExtraShift = isPartTime && attendedAny && !shiftDays.includes(dayOfWeek);
 
             if (d <= todayUTC) {
-                if (isPartTime) {
-                    if (shiftDays.includes(dayOfWeek) && !isLibur) totalHariKerja++; 
-                    if (attendedAny) hariMasuk++;
-                } else {
-                    if (!isAhad && !isLibur) { totalHariKerja++; if (attendedAny) hariMasuk++; else hariBolos++; } 
-                    else if (attendedAny) hariMasuk++; 
-                }
+                if (isPartTime) { if (shiftDays.includes(dayOfWeek) && !isLibur) totalHariKerja++; if (attendedAny) hariMasuk++; } 
+                else { if (!isAhad && !isLibur) { totalHariKerja++; if (attendedAny) hariMasuk++; else hariBolos++; } else if (attendedAny) hariMasuk++; }
             }
 
             let bg = 'bg-white border-slate-200', info = "", indicator = "";
             if (isPartTime) {
-                if (isWajib) indicator = `<span class="absolute -top-1 -right-1 flex h-3 w-3 z-10" title="Hari Wajib Masuk"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span><span class="relative flex justify-center items-center rounded-full h-full w-full bg-rose-500 shadow border-2 border-white text-[7px] text-white font-bold">!</span></span>`;
-                else if (isCovered) indicator = `<span class="absolute -top-1 -right-1 flex h-3 w-3 z-10" title="Shift Tercover"><span class="relative flex justify-center items-center rounded-full h-full w-full bg-emerald-400 shadow border-2 border-white text-[7px] text-white font-bold">✓</span></span>`;
-                else if (isExtraShift) indicator = `<span class="absolute -top-1 -left-1 flex h-3 w-3 z-10" title="Kehadiran Ekstra"><span class="relative flex justify-center items-center rounded-full h-full w-full bg-blue-500 shadow border-2 border-white text-[7px] text-white font-bold">+</span></span>`;
+                if (isWajib) indicator = `<span class="absolute -top-1 -right-1 flex h-3 w-3 z-10"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span><span class="relative flex justify-center items-center rounded-full h-full w-full bg-rose-500 shadow border-2 text-[7px] text-white">!</span></span>`;
+                else if (isCovered) indicator = `<span class="absolute -top-1 -right-1 flex h-3 w-3 z-10"><span class="relative flex justify-center items-center rounded-full h-full w-full bg-emerald-400 shadow border-2 text-[7px] text-white">✓</span></span>`;
+                else if (isExtraShift) indicator = `<span class="absolute -top-1 -left-1 flex h-3 w-3 z-10"><span class="relative flex justify-center items-center rounded-full h-full w-full bg-blue-500 shadow border-2 text-[7px] text-white">+</span></span>`;
             }
 
             if (isLibur) {
                 bg = 'bg-blue-100 border-blue-300 text-blue-900';
                 if (hasMasuk || hasKeluar) {
-                    let textDurasi = "";
-                    if (hasMasuk && hasKeluar) {
-                        const durasi = hitungDurasiDecimal(data.jam.masuk, data.jam.keluar); totalDurasi += durasi;
-                        textDurasi = `<div class="mt-0.5 px-1 bg-white/50 rounded text-[8px] font-bold">${durasi.toFixed(2)}j</div>`;
-                    }
-                    info = indicator + `<div class="text-[8px] md:text-[9px] font-medium mt-0.5">M ${formatWaktu(data.jam.masuk)}</div><div class="text-[8px] md:text-[9px] font-medium">K ${formatWaktu(data.jam.keluar)}</div>${textDurasi}`;
+                    let tD = ""; if (hasMasuk && hasKeluar) { const dur = hitungDurasiDecimal(data.jam.masuk, data.jam.keluar); totalDurasi += dur; tD = `<div class="mt-0.5 px-1 bg-white/50 rounded text-[8px] font-bold">${dur.toFixed(2)}j</div>`; }
+                    info = indicator + `<div class="text-[8px] md:text-[9px] font-medium mt-0.5">M ${formatWaktu(data.jam.masuk)}</div><div class="text-[8px] md:text-[9px] font-medium">K ${formatWaktu(data.jam.keluar)}</div>${tD}`;
                 } else info = indicator + `<div class="text-[8px] mt-1 font-bold opacity-60">LIBUR</div>`;
             } else if (hasMasuk && hasKeluar) {
-                bg = 'bg-emerald-500 border-emerald-600 text-white shadow-sm';
-                const durasi = hitungDurasiDecimal(data.jam.masuk, data.jam.keluar); totalDurasi += durasi;
-                info = indicator + `<div class="text-[8px] md:text-[10px] font-medium opacity-90 mt-0.5">M ${formatWaktu(data.jam.masuk)}</div><div class="text-[8px] md:text-[10px] font-medium opacity-90">K ${formatWaktu(data.jam.keluar)}</div><div class="mt-0.5 px-1 py-0.5 bg-white/20 rounded text-[8px] md:text-[9px] font-bold">${durasi.toFixed(2)}j</div>`;
-            } else if (hasMasuk) {
-                bg = 'bg-amber-400 border-amber-500 text-amber-900 shadow-sm';
-                info = indicator + `<div class="text-[8px] md:text-[10px] font-semibold mt-1 bg-white/30 px-1 py-0.5 rounded">M ${formatWaktu(data.jam.masuk)}</div>`; dataLengkap = false;
-            } else if (hasKeluar) {
-                bg = 'bg-rose-500 border-rose-600 text-white shadow-sm';
-                info = indicator + `<div class="text-[8px] md:text-[10px] font-semibold mt-1 bg-white/20 px-1 py-0.5 rounded">K ${formatWaktu(data.jam.keluar)}</div>`; dataLengkap = false;
-            } else if (d < todayUTC && !isLibur && !isAhad) { 
-                if (isPartTime) {
-                    if (isWajib) { bg = 'bg-red-50 border-red-200 text-red-500'; info = indicator + `<div class="text-[8px] mt-1 font-bold opacity-80">ALFA</div>`; } 
-                    else if (isCovered) { bg = 'bg-emerald-50 border-emerald-100 text-emerald-600'; info = indicator + `<div class="text-[7px] mt-1 font-bold opacity-80">BEBAS</div>`; } 
-                    else bg = 'bg-slate-50 border-slate-100 text-slate-300 opacity-70'; 
-                } else bg = 'bg-slate-100 border-slate-200 text-slate-400';
+                bg = 'bg-emerald-500 border-emerald-600 text-white shadow-sm'; const durasi = hitungDurasiDecimal(data.jam.masuk, data.jam.keluar); totalDurasi += durasi;
+                info = indicator + `<div class="text-[8px] md:text-[10px] opacity-90 mt-0.5">M ${formatWaktu(data.jam.masuk)}</div><div class="text-[8px] md:text-[10px] opacity-90">K ${formatWaktu(data.jam.keluar)}</div><div class="mt-0.5 px-1 bg-white/20 rounded text-[8px] font-bold">${durasi.toFixed(2)}j</div>`;
+            } else if (hasMasuk) { bg = 'bg-amber-400 border-amber-500 text-amber-900 shadow-sm'; info = indicator + `<div class="text-[8px] md:text-[10px] mt-1 bg-white/30 px-1 py-0.5 rounded">M ${formatWaktu(data.jam.masuk)}</div>`; dataLengkap = false; } 
+            else if (hasKeluar) { bg = 'bg-rose-500 border-rose-600 text-white shadow-sm'; info = indicator + `<div class="text-[8px] md:text-[10px] mt-1 bg-white/20 px-1 py-0.5 rounded">K ${formatWaktu(data.jam.keluar)}</div>`; dataLengkap = false; } 
+            else if (d < todayUTC && !isLibur && !isAhad) { 
+                if (isPartTime) { if (isWajib) { bg = 'bg-red-50 text-red-500'; info = indicator + `<div class="text-[8px] mt-1 font-bold opacity-80">ALFA</div>`; } else if (isCovered) { bg = 'bg-emerald-50 text-emerald-600'; info = indicator + `<div class="text-[7px] mt-1 font-bold opacity-80">BEBAS</div>`; } else bg = 'bg-slate-50 opacity-70'; } else bg = 'bg-slate-100 text-slate-400';
             } else if (isAhad) bg = 'bg-red-50 border-red-100 text-red-400';
             else if (d >= todayUTC) info = indicator + info;
             
@@ -1943,15 +1779,14 @@
         
         view.innerHTML = calendarHTML;
         if (isPartTime) hariBolos = Math.max(0, totalHariKerja - hariMasuk);
-        const selisih = totalDurasi - (hariMasuk * jamKerja);
-        const diffDisplay = document.getElementById('diffHoursDisplay');
+        const selisih = totalDurasi - (hariMasuk * jamKerja), diffDisplay = UI.el('diffHoursDisplay');
         if (dataLengkap) { diffDisplay.innerText = selisih.toFixed(2); diffDisplay.className = selisih >= 0 ? "text-sm md:text-base font-bold text-emerald-600" : "text-sm md:text-base font-bold text-rose-600"; } 
-        else { diffDisplay.innerText = "Tdk Lengkap"; diffDisplay.className = "text-[9px] md:text-xs font-bold text-amber-600 flex items-center h-full justify-center"; }
-        document.getElementById('attendanceSummary').innerText = `${hariMasuk}/${totalHariKerja}`;
-        if (document.getElementById('absenceSummary')) document.getElementById('absenceSummary').innerText = hariBolos;
+        else { diffDisplay.innerText = "Tdk Lengkap"; diffDisplay.className = "text-[9px] font-bold text-amber-600 flex items-center h-full justify-center"; }
+        UI.el('attendanceSummary').innerText = `${hariMasuk}/${totalHariKerja}`;
+        if (UI.el('absenceSummary')) UI.el('absenceSummary').innerText = hariBolos;
     }
 
-    document.getElementById('periodFilter').addEventListener('change', renderCalendar);
+    UI.el('periodFilter').addEventListener('change', renderCalendar);
 
     async function prepareAdminData() {
         try {
@@ -1963,65 +1798,42 @@
             AppState.admin.attendance = attendance || [];
             if (AppState.holidays.size === 0 && holidays) {
                 holidays.forEach(h => {
-                    const startStr = h.start_date.split(' ')[0].split('T')[0]; 
-                    const endStr = (h.end_date || h.start_date).split(' ')[0].split('T')[0];
-                    let dStart = new Date(startStr + 'T00:00:00Z');
-                    let dEnd = new Date(endStr + 'T00:00:00Z');
+                    let dStart = new Date(h.start_date.split('T')[0] + 'T00:00:00Z'), dEnd = new Date((h.end_date || h.start_date).split('T')[0] + 'T00:00:00Z');
                     for (let d = new Date(dStart); d <= dEnd; d.setUTCDate(d.getUTCDate() + 1)) AppState.holidays.add(d.toISOString().split('T')[0]);
                 });
             }
             AppState.admin.employees = {};
-            (employees || []).forEach(emp => {
-                AppState.admin.employees[emp.code] = { nama: emp.name, start: parseStartDate(emp.start_date), jamKerja: parseFloat(emp.working_hours) || 8, position: emp.position, shift_type: emp.shift_type, raw: emp };
-            });
-        } catch (e) { console.error("Gagal load data admin:", e); }
+            (employees || []).forEach(emp => { AppState.admin.employees[emp.code] = { nama: emp.name, start: parseStartDate(emp.start_date), jamKerja: parseFloat(emp.working_hours) || 8, position: emp.position, shift_type: emp.shift_type, raw: emp }; });
+        } catch (e) {}
     }
 
     function populateAdminDropdown(currentCode) {
-        const select = document.getElementById('adminEmployeeSelect');
+        const select = UI.el('adminEmployeeSelect');
         let optionsHTML = '<option value="" disabled>-- Pilih Karyawan --</option>'; 
         Object.entries(AppState.admin.employees).forEach(([code, data]) => {
-            const isSelected = code === currentCode ? 'selected' : '';
-            const status = data.position.includes('Part Time') ? 'Part Time' : 'Reguler';
-            optionsHTML += `<option value="${code}" ${isSelected}>${data.nama} (${status})</option>`;
+            optionsHTML += `<option value="${code}" ${code === currentCode ? 'selected' : ''}>${data.nama} (${data.position.includes('Part Time') ? 'Part Time' : 'Reguler'})</option>`;
         });
         select.innerHTML = optionsHTML;
     }
 
-    async function onAdminSelectEmployee(selectedCode) {
+    window.onAdminSelectEmployee = async function(selectedCode) {
         const selectedUserRaw = AppState.admin.employees[selectedCode].raw;
         const { data: slips } = await supabaseClient.from('gaji').select('*').eq('noid', selectedCode).order('id', { ascending: false });
         renderDashboard(selectedUserRaw, slips || []);
-    }
+    };
 
-    async function sendWhatsApp(pesan) {
-        const token = 'cAswYc8237BQhnuGWdBE'; 
-        const targetWA = '120363421730994663@g.us';
-        const pesanDenganMention = pesan + "\n\nCc: @6281355730352";
-        try {
-            await fetch('https://api.fonnte.com/send', {
-                method: 'POST',
-                headers: { 'Authorization': token, 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ target: targetWA, message: pesanDenganMention, })
-            });
-        } catch (error) { console.error('Gagal mengirim WA:', error); }
-    }
-
-    function triggerManualSend() {
-        if (Object.keys(AppState.admin.employees).length === 0) { alert("Data belum selesai dimuat, silakan tunggu sebentar."); return; }
+    window.triggerManualSend = function() {
+        if (Object.keys(AppState.admin.employees).length === 0) { alert("Data belum selesai dimuat."); return; }
         checkAndNotifyPartTimeSchedule(true);
-    }
+    };
 
     function checkAndNotifyPartTimeSchedule(isManualTrigger = false) {
-        const today = new Date(), lookaheadDays = 7; 
-        let newSchedule = {};
-
+        // [Logic tetap sama]
+        const today = new Date(), lookaheadDays = 7; let newSchedule = {};
         Object.entries(AppState.admin.employees).forEach(([noid, kary]) => {
             if (!kary.position || !kary.position.toLowerCase().includes('part time')) return;
             const shiftDays = parseInt(kary.shift_type) === 2 ? [4, 5, 6] : [1, 2, 3];
-            let dStart, dEnd;
-            const start = kary.start, todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
-            
+            let dStart, dEnd; const start = kary.start, todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
             for (let i = 0; i < 12; i++) {
                 dStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, start.getUTCDate()));
                 dEnd = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth() + 1, dStart.getUTCDate() - 1));
@@ -2029,78 +1841,60 @@
             }
             if(!dStart || !dEnd) return;
 
-            const daysInPeriod = Math.round((dEnd - dStart) / (1000 * 60 * 60 * 24)) + 1;
-            const dailyData = {};
-            AppState.admin.attendance.filter(r => r.employeeCode === noid).forEach(r => {
-                dailyData[r.date] = { jam: { masuk: (r.checkIn && r.checkIn !== '--') ? r.checkIn : null, keluar: (r.checkOut && r.checkOut !== '--') ? r.checkOut : null } };
-            });
+            const daysInPeriod = Math.round((dEnd - dStart) / (1000 * 60 * 60 * 24)) + 1, dailyData = {};
+            AppState.admin.attendance.filter(r => r.employeeCode === noid).forEach(r => { dailyData[r.date] = { jam: { masuk: (r.checkIn && r.checkIn !== '--') ? r.checkIn : null, keluar: (r.checkOut && r.checkOut !== '--') ? r.checkOut : null } }; });
 
             let wajibDaysSet = new Set(), weeks = [], currentWeek = { targetDays: [], attendedDays: [] };
             for (let i = 0; i < daysInPeriod; i++) {
-                const d = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), dStart.getUTCDate() + i));
-                const dateStr = d.toISOString().split('T')[0];
-                const dayOfWeek = d.getUTCDay(), isLibur = AppState.holidays.has(dateStr);
-                const hasMasuk = dailyData[dateStr] && (dailyData[dateStr].jam.masuk || dailyData[dateStr].jam.keluar);
-                
+                const d = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth(), dStart.getUTCDate() + i)), dateStr = d.toISOString().split('T')[0], dayOfWeek = d.getUTCDay();
+                const isLibur = AppState.holidays.has(dateStr), hasMasuk = dailyData[dateStr] && (dailyData[dateStr].jam.masuk || dailyData[dateStr].jam.keluar);
                 if (!isLibur && shiftDays.includes(dayOfWeek)) currentWeek.targetDays.push(dateStr);
                 if (hasMasuk) currentWeek.attendedDays.push(dateStr);
-                
                 if (dayOfWeek === 0 || i === daysInPeriod - 1) { weeks.push(currentWeek); currentWeek = { targetDays: [], attendedDays: [] }; }
             }
-            
             let balanceSurplus = 0; 
             weeks.forEach(w => {
                 const attendedOnTarget = w.targetDays.filter(td => w.attendedDays.includes(td)).length;
                 let availableSurplus = Math.max(0, balanceSurplus) + (w.attendedDays.length - attendedOnTarget);
-                w.targetDays.forEach(td => {
-                    if (availableSurplus > 0 && !w.attendedDays.includes(td)) availableSurplus--; 
-                    else wajibDaysSet.add(td);
-                });
+                w.targetDays.forEach(td => { if (availableSurplus > 0 && !w.attendedDays.includes(td)) availableSurplus--; else wajibDaysSet.add(td); });
                 balanceSurplus = balanceSurplus + w.attendedDays.length - w.targetDays.length;
             });
-
             let upcomingWajib = [];
             for(let i = 1; i <= lookaheadDays; i++) {
                 let futureDate = new Date(); futureDate.setDate(today.getDate() + i);
-                let fStr = futureDate.toISOString().split('T')[0];
-                if (wajibDaysSet.has(fStr)) upcomingWajib.push(fStr);
+                let fStr = futureDate.toISOString().split('T')[0]; if (wajibDaysSet.has(fStr)) upcomingWajib.push(fStr);
             }
             newSchedule[noid] = upcomingWajib;
         });
 
-        let msg = "📢 *UPDATE JADWAL PART-TIME* 📢\nBerlaku untuk 7 hari ke depan (telah disesuaikan otomatis dengan surplus kehadiran):\n\n";
+        let msg = "📢 *UPDATE JADWAL PART-TIME* 📢\nBerlaku untuk 7 hari ke depan:\n\n";
         let count = 0;
         Object.entries(newSchedule).forEach(([noid, dates]) => {
             const nama = AppState.admin.employees[noid].nama;
-            if (dates.length > 0) {
-                const formattedDates = dates.map(d => new Date(d).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })).join(', ');
-                msg += `👤 *${nama}*\n   Wajib Masuk: ${formattedDates}\n`;
-            } else msg += `👤 *${nama}*\n   Wajib Masuk: Bebas (Telah Tercover) 🎉\n`;
+            if (dates.length > 0) msg += `👤 *${nama}*\n   Wajib Masuk: ${dates.map(d => new Date(d).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })).join(', ')}\n`;
+            else msg += `👤 *${nama}*\n   Wajib Masuk: Bebas 🎉\n`;
             count++;
         });
 
         if (isManualTrigger) {
             localStorage.setItem('lastManualSendDate', getTodayDateString());
-            localStorage.setItem('lastPartTimeSchedule', JSON.stringify(newSchedule));
-            if (count > 0) { msg += "\n_Pesan dikirim secara manual_"; sendWhatsApp(msg); } 
-            else alert("Tidak ada karyawan part-time untuk dihitung jadwalnya.");
-            alert("Pesan rekap jadwal berhasil dikirim ke grup WhatsApp!");
-            updateManualButtonState();
+            if (count > 0) {
+                fetch('https://api.fonnte.com/send', {
+                    method: 'POST', headers: { 'Authorization': 'cAswYc8237BQhnuGWdBE', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ target: '120363421730994663@g.us', message: msg + "\n_Pesan dikirim manual_\n\nCc: @6281355730352" })
+                });
+            } else alert("Tidak ada karyawan part-time.");
+            alert("Pesan rekap jadwal berhasil dikirim!"); updateManualButtonState();
         }
     }
 
     function updateManualButtonState() {
-        const btn = document.getElementById('btnManualSend');
-        const todayStr = getTodayDateString();
-        const lastManualDate = localStorage.getItem('lastManualSendDate');
-        
-        if (lastManualDate === todayStr) {
-            btn.disabled = true;
-            btn.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 inline"></i> Terkirim Hari Ini`;
+        const btn = UI.el('btnManualSend');
+        if (localStorage.getItem('lastManualSendDate') === getTodayDateString()) {
+            btn.disabled = true; btn.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3 inline"></i> Terkirim Hari Ini`;
             btn.className = "text-[10px] sm:text-xs bg-slate-400 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm cursor-not-allowed flex items-center gap-1";
         } else {
-            btn.disabled = false;
-            btn.innerHTML = `<i data-lucide="message-square" class="w-3 h-3 inline"></i> Kirim WA`;
+            btn.disabled = false; btn.innerHTML = `<i data-lucide="message-square" class="w-3 h-3 inline"></i> Kirim WA`;
             btn.className = "text-[10px] sm:text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1";
         }
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -2109,204 +1903,139 @@
     // PWA Mandatory Screen Logic
     let deferredPrompt;
     function showMandatoryScreen(type) {
-        const videoEl = document.getElementById('camera-stream');
+        const videoEl = UI.el('camera-stream');
         if (videoEl && videoEl.srcObject) videoEl.srcObject.getTracks().forEach(track => track.stop());
-
-        let existing = document.getElementById('pwa-mandatory-overlay');
-        if (existing) existing.remove();
-
-        const overlay = document.createElement('div');
-        overlay.id = 'pwa-mandatory-overlay';
+        let existing = UI.el('pwa-mandatory-overlay'); if (existing) existing.remove();
+        
+        const overlay = document.createElement('div'); overlay.id = 'pwa-mandatory-overlay';
         overlay.className = "fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center p-6 text-center animate-fade-in overflow-y-auto";
 
-        let content = '';
-        const reasonFormUI = `
-            <div id="install-reason-ui" class="hidden flex-col items-center w-full max-w-xs animate-fade-in mt-8">
-                <div class="w-16 h-16 bg-blue-900/50 rounded-full flex items-center justify-center border-2 border-blue-500 mb-4">
-                    <i class="fa-solid fa-comment-dots text-2xl text-blue-400"></i>
-                </div>
+        let content = '', reasonFormUI = `
+            <div id="install-reason-ui" class="hidden flex-col items-center w-full max-w-xs mt-8">
+                <div class="w-16 h-16 bg-blue-900/50 rounded-full flex items-center justify-center border-2 border-blue-500 mb-4"><i class="fa-solid fa-comment-dots text-2xl text-blue-400"></i></div>
                 <h3 class="text-xl font-bold text-white mb-2">Kendala Instalasi</h3>
-                <p class="text-slate-300 text-sm mb-4 text-center leading-relaxed">Beritahu admin kendala Anda agar dapat diizinkan absen melalui browser hari ini.</p>
-                <textarea id="skip-reason-input" rows="3" class="w-full rounded-xl p-3 bg-slate-800 border border-slate-600 text-white text-sm mb-4 focus:outline-none focus:border-blue-500 placeholder-slate-500" placeholder="Contoh: Memori HP penuh, atau tombol instal tidak muncul..."></textarea>
-                <button id="btn-submit-reason" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg transition-all flex justify-center items-center gap-2">
-                    <i class="fa-solid fa-paper-plane"></i> Kirim & Buka Aplikasi
-                </button>
-                <button id="btn-cancel-skip" class="mt-4 text-slate-400 text-sm hover:text-white transition-colors p-2">Kembali ke halaman instal</button>
-            </div>
-        `;
+                <textarea id="skip-reason-input" rows="3" class="w-full rounded-xl p-3 bg-slate-800 text-white text-sm mb-4" placeholder="Alasan..."></textarea>
+                <button id="btn-submit-reason" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl flex justify-center items-center gap-2">Kirim & Buka Aplikasi</button>
+                <button id="btn-cancel-skip" class="mt-4 text-slate-400 text-sm hover:text-white p-2">Kembali</button>
+            </div>`;
 
         if (type === 'android_install') {
             content = `
-                <div id="install-default-ui" class="flex flex-col items-center w-full animate-fade-in">
-                    <div class="w-24 h-24 bg-emerald-900/50 rounded-full flex items-center justify-center border-4 border-emerald-500 shadow-xl mb-6">
-                        <i class="fa-solid fa-download text-4xl text-emerald-400"></i>
-                    </div>
+                <div id="install-default-ui" class="flex flex-col items-center w-full">
+                    <div class="w-24 h-24 bg-emerald-900/50 rounded-full flex items-center justify-center border-4 border-emerald-500 mb-6"><i class="fa-solid fa-download text-4xl text-emerald-400"></i></div>
                     <h2 class="text-2xl font-bold text-white mb-3">Wajib Instal Aplikasi</h2>
-                    <p class="text-slate-300 mb-8 max-w-sm leading-relaxed">Sistem absensi tidak dapat digunakan melalui browser HP.<br><br>Silakan instal aplikasi ini ke perangkat Anda terlebih dahulu.</p>
-                    <button id="btn-force-install" class="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 w-full max-w-xs text-lg mb-2">
-                        <i class="fa-solid fa-cloud-arrow-down"></i> Instal Sekarang
-                    </button>
-                    <button id="btn-skip-install" class="mt-4 text-slate-400 text-sm underline hover:text-slate-300 p-2">Saya mengalami kendala instalasi</button>
-                </div>
-                ${reasonFormUI}
-            `;
+                    <button id="btn-force-install" class="px-8 py-4 bg-emerald-600 text-white font-bold rounded-xl flex items-center justify-center gap-3 w-full max-w-xs text-lg mb-2"><i class="fa-solid fa-cloud-arrow-down"></i> Instal Sekarang</button>
+                    <button id="btn-skip-install" class="mt-4 text-slate-400 text-sm underline p-2">Kendala instalasi</button>
+                </div> ${reasonFormUI}`;
         } else if (type === 'ios_install') {
             content = `
-                <div id="install-default-ui" class="flex flex-col items-center w-full animate-fade-in">
-                    <div class="w-24 h-24 bg-blue-900/50 rounded-full flex items-center justify-center border-4 border-blue-500 shadow-xl mb-6">
-                        <i class="fa-brands fa-apple text-4xl text-blue-400"></i>
-                    </div>
+                <div id="install-default-ui" class="flex flex-col items-center w-full">
+                    <div class="w-24 h-24 bg-blue-900/50 rounded-full flex items-center justify-center border-4 border-blue-500 mb-6"><i class="fa-brands fa-apple text-4xl text-blue-400"></i></div>
                     <h2 class="text-2xl font-bold text-white mb-3">Wajib Instal (iOS)</h2>
-                    <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700 max-w-sm mb-4 text-slate-300 text-sm text-left leading-relaxed w-full">
-                        Pengguna iPhone/iPad diwajibkan melakukan instalasi manual:<br><br>
-                        1. Tekan ikon <b>Bagikan</b> <i class="fa-solid fa-arrow-up-from-bracket mx-1 text-blue-400"></i> di bilah bawah Safari.<br>
-                        2. Pilih opsi <b>"Add to Home Screen"</b> <i class="fa-regular fa-square-plus mx-1 text-blue-400"></i>.<br>
-                        3. Buka aplikasi absensi dari Layar Utama Anda.
-                    </div>
-                    <button id="btn-skip-install" class="mt-2 text-slate-400 text-sm underline hover:text-slate-300 p-2">Saya mengalami kendala instalasi</button>
-                </div>
-                ${reasonFormUI}
-            `;
+                    <div class="bg-slate-800/80 p-5 rounded-xl border border-slate-700 max-w-sm mb-4 text-slate-300 text-sm text-left">Gunakan opsi <b>Add to Home Screen</b> di Safari.</div>
+                    <button id="btn-skip-install" class="mt-2 text-slate-400 text-sm underline p-2">Kendala instalasi</button>
+                </div> ${reasonFormUI}`;
         } else if (type === 'blocked') {
-            content = `
-                <div class="flex flex-col items-center w-full">
-                    <div class="w-24 h-24 bg-rose-900/50 rounded-full flex items-center justify-center border-4 border-rose-500 shadow-xl mb-6">
-                        <i class="fa-solid fa-ban text-4xl text-rose-500"></i>
-                    </div>
-                    <h2 class="text-2xl font-bold text-white mb-3">Akses Diblokir</h2>
-                    <p class="text-slate-300 mb-8 max-w-sm leading-relaxed">
-                        Aplikasi ini sudah terinstal di perangkat Anda.<br><br><b>Halaman web ini dikunci.</b> Silakan tutup browser ini dan buka dari Layar Utama HP Anda.
-                    </p>
-                </div>
-            `;
+            content = `<div class="flex flex-col items-center w-full"><div class="w-24 h-24 bg-rose-900/50 rounded-full flex items-center justify-center border-4 border-rose-500 mb-6"><i class="fa-solid fa-ban text-4xl text-rose-500"></i></div><h2 class="text-2xl font-bold text-white mb-3">Akses Diblokir</h2><p class="text-slate-300 mb-8 max-w-sm">Tutup web dan buka aplikasi dari Layar Utama HP Anda.</p></div>`;
         } else if (type === 'installing') {
-            content = `
-                <div class="flex flex-col items-center w-full text-center">
-                    <div class="w-24 h-24 bg-emerald-900/30 rounded-full flex items-center justify-center border-4 border-emerald-500 mx-auto mb-6">
-                        <i class="fa-solid fa-mobile-screen-button text-4xl text-emerald-400 animate-bounce"></i>
-                    </div>
-                    <h2 class="text-2xl font-bold text-emerald-400 mb-3 animate-pulse">Proses Instal di Latar Belakang...</h2>
-                    <p class="text-slate-300 max-w-sm leading-relaxed">Silakan tunggu notifikasi yang menyatakan bahwa aplikasi telah berhasil terinstal.</p>
-                </div>
-            `;
+            content = `<div class="flex flex-col items-center w-full"><div class="w-24 h-24 bg-emerald-900/30 rounded-full flex items-center justify-center border-4 border-emerald-500 mx-auto mb-6"><i class="fa-solid fa-mobile-screen-button text-4xl text-emerald-400 animate-bounce"></i></div><h2 class="text-2xl font-bold text-emerald-400 mb-3 animate-pulse">Proses Instalasi...</h2></div>`;
         }
+        overlay.innerHTML = content; document.body.appendChild(overlay);
 
-        overlay.innerHTML = content;
-        document.body.appendChild(overlay);
-
-        const btnForce = document.getElementById('btn-force-install');
-        if (btnForce) {
-            btnForce.addEventListener('click', async () => {
-                if (!deferredPrompt) return;
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') showMandatoryScreen('installing');
-                deferredPrompt = null;
-            });
-        }
-
-        const btnSkip = document.getElementById('btn-skip-install');
-        const btnCancelSkip = document.getElementById('btn-cancel-skip');
-        const uiDefault = document.getElementById('install-default-ui');
-        const uiReason = document.getElementById('install-reason-ui');
-
-        if (btnSkip) {
-            btnSkip.addEventListener('click', () => {
-                uiDefault.classList.add('hidden');
-                uiReason.classList.remove('hidden');
-                uiReason.classList.add('flex');
-            });
-        }
-        if (btnCancelSkip) {
-            btnCancelSkip.addEventListener('click', () => {
-                uiReason.classList.add('hidden');
-                uiReason.classList.remove('flex');
-                uiDefault.classList.remove('hidden');
-            });
-        }
-
-        const btnSubmitReason = document.getElementById('btn-submit-reason');
-        if (btnSubmitReason) {
-            btnSubmitReason.addEventListener('click', () => {
-                const reasonText = document.getElementById('skip-reason-input').value.trim();
-                if (!reasonText) { alert("Harap isi alasan atau kendala Anda."); return; }
-                sessionStorage.setItem('skip_install_allowed', 'true');
-                sessionStorage.setItem('skip_install_reason', reasonText);
-                overlay.remove();
-                initCamera();
-                showToast("Akses Diizinkan", "Silakan lakukan absensi. Kendala Anda akan dilampirkan pada notifikasi Telegram.", "info");
-            });
+        if (UI.el('btn-force-install')) UI.el('btn-force-install').onclick = async () => { if (deferredPrompt) { deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') showMandatoryScreen('installing'); deferredPrompt = null; } };
+        if (UI.el('btn-skip-install')) UI.el('btn-skip-install').onclick = () => { UI.hide('install-default-ui'); UI.toggleFlex('install-reason-ui', true); };
+        if (UI.el('btn-cancel-skip')) UI.el('btn-cancel-skip').onclick = () => { UI.toggleFlex('install-reason-ui', false); UI.show('install-default-ui'); };
+        if (UI.el('btn-submit-reason')) {
+            UI.el('btn-submit-reason').onclick = () => {
+                const r = UI.el('skip-reason-input').value.trim();
+                if (!r) { alert("Harap isi kendala Anda."); return; }
+                sessionStorage.setItem('skip_install_allowed', 'true'); sessionStorage.setItem('skip_install_reason', r);
+                overlay.remove(); initCamera(); showToast("Akses Diizinkan", "Kendala dilampirkan ke admin.", "info");
+            };
         }
     }
 
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: minimal-ui)').matches || window.navigator.standalone === true || document.referrer.includes('android-app://') || window.location.search.includes('mode=pwa');
-
-    if (!isStandalone && isMobileDevice) {
-        if (sessionStorage.getItem('skip_install_allowed') !== 'true') {
-            if (isIOS) {
-                showMandatoryScreen('ios_install');
-            } else {
-                let promptFired = false;
-                window.addEventListener('beforeinstallprompt', (e) => {
-                    e.preventDefault(); deferredPrompt = e; promptFired = true; showMandatoryScreen('android_install');
-                });
-                setTimeout(() => { if (!promptFired) showMandatoryScreen('blocked'); }, 1500);
-            }
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches || window.navigator.standalone === true || window.location.search.includes('mode=pwa');
+    if (!isStandalone && isMobileDevice && sessionStorage.getItem('skip_install_allowed') !== 'true') {
+        if (isIOS) showMandatoryScreen('ios_install');
+        else {
+            let promptFired = false;
+            window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; promptFired = true; showMandatoryScreen('android_install'); });
+            setTimeout(() => { if (!promptFired) showMandatoryScreen('blocked'); }, 1500);
         }
     }
-
     window.addEventListener('appinstalled', () => showMandatoryScreen('installing'));
 
-  document.addEventListener('DOMContentLoaded', () => {
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-        initClock(); 
-        initCamera();
-        initLocation(); 
-        refreshDashboardData(); 
-        checkLoginState();
+    // --- SISTEM VERIFIKASI WA & OTP AKSES APLIKASI ---
+    window.startWaOtpVerification = function() {
+        UI.show('wa-otp-modal');
+        if (!currentUser.wa_number || currentUser.wa_number.trim() === "") { UI.show('step-input-wa'); UI.hide('step-verify-otp'); } 
+        else { UI.hide('step-input-wa'); UI.show('step-verify-otp'); sendAppOtp(); }
+    };
+
+    async function saveWaNumber(e) {
+        e.preventDefault();
+        let waNumber = UI.el('input-wa-number').value.trim();
+        if (waNumber.startsWith('0')) waNumber = '62' + waNumber.substring(1);
+
+        await withLoading('btn-save-wa', 'Menyimpan...', async () => {
+            const { error } = await supabaseClient.from('employees').update({ wa_number: waNumber }).eq('code', currentUser.code);
+            if (error) { alert("Gagal menyimpan nomor WA: " + error.message); return; }
+            currentUser.wa_number = waNumber; localStorage.setItem('attendance_user', JSON.stringify(currentUser));
+            showToast("Sukses", "Nomor WA berhasil disimpan.", "success");
+            UI.hide('step-input-wa'); UI.show('step-verify-otp'); sendAppOtp();
+        });
+    }
+
+    window.sendAppOtp = async function() {
+        appOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        appOtpTimestamp = Date.now();
+        const waText = `*KODE AKSES APLIKASI ABSENSI*\n\nHalo ${currentUser.name},\nKode OTP Anda untuk masuk ke aplikasi adalah: *${appOtpCode}*\n\n_Catatan: Kode ini hanya berlaku 5 menit._`;
         
-        const inputKode = document.getElementById('employee-code-input');
-        if (inputKode) {
-            inputKode.addEventListener('focus', () => {
-                setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 300);
+        try {
+            await fetch('https://api.fonnte.com/send', {
+                method: 'POST', headers: { 'Authorization': 'cAswYc8237BQhnuGWdBE', 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ target: currentUser.wa_number, message: waText })
             });
-        }
 
-      // --- TAMBAHAN KODE UNTUK MENANGANI SAAT BUKA APLIKASI LAIN & PINDAH TAB ---
+            UI.el('app-otp-info').innerHTML = `Kode OTP dikirim ke WA <b>${maskPhoneNumber(currentUser.wa_number)}</b>.<br><span class="block mt-1.5 pt-1.5 border-t border-emerald-200/60 text-[10px] text-emerald-700">Pengirim: <b class="text-xs">6285823253354</b></span>`;
+            UI.el('input-app-otp').value = "";
+            
+            if (appOtpInterval) clearInterval(appOtpInterval);
+            appOtpInterval = startOtpTimer('app-otp-timer', 'btn-verify-otp', appOtpTimestamp);
+        } catch (error) { alert("Gagal mengirim pesan. Pastikan koneksi stabil."); }
+    };
+
+    async function verifyAppOtp(e) {
+        e.preventDefault();
+        if (Date.now() - appOtpTimestamp > (5 * 60 * 1000)) { alert("Kode OTP kedaluwarsa."); return; }
+
+        if (UI.el('input-app-otp').value.trim() === appOtpCode) {
+            if (appOtpInterval) clearInterval(appOtpInterval);
+            sessionStorage.setItem('app_unlocked', 'true');
+            UI.hide('wa-otp-modal');
+            showToast("Akses Diberikan", "Verifikasi berhasil.", "success");
+            checkLoginState();
+        } else alert("Kode OTP salah!");
+    }
+
+    UI.el('btn-cancel-login-otp').onclick = () => { UI.hide('wa-otp-modal'); if (appOtpInterval) clearInterval(appOtpInterval); UI.el('btn-logout').click(); };
+  
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        initClock(); initCamera(); initLocation(); refreshDashboardData(); checkLoginState();
         
-        // 1. Deteksi saat tab diminimize atau tertutup aplikasi lain sepenuhnya (Berlaku untuk HP & Laptop)
+        const inputKode = UI.el('employee-code-input');
+        if (inputKode) inputKode.addEventListener('focus', () => setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 300));
+        
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
-                turnOffCamera(); 
-            } else if (document.visibilityState === 'visible') {
-                const contentAbsensi = document.getElementById('tab-content-absensi');
-                if (contentAbsensi && !contentAbsensi.classList.contains('hidden')) {
-                    initCamera(); 
-                }
-            }
+            if (document.visibilityState === 'hidden') turnOffCamera(); 
+            else if (document.visibilityState === 'visible') { const c = UI.el('tab-content-absensi'); if (c && !c.classList.contains('hidden')) initCamera(); }
         });
-
-        // 2. Deteksi saat pindah aplikasi di Laptop tanpa meminimize browser (Kehilangan Fokus Jendela)
-        window.addEventListener('blur', () => {
-            turnOffCamera();
-        });
-
-        // 3. Deteksi saat pengguna kembali mengklik / memfokuskan kursor ke jendela absensi
-        window.addEventListener('focus', () => {
-            const contentAbsensi = document.getElementById('tab-content-absensi');
-            if (contentAbsensi && !contentAbsensi.classList.contains('hidden')) {
-                // Beri sedikit delay agar browser siap meminta hardware kamera kembali
-                setTimeout(() => { initCamera(); }, 200);
-            }
-        });
-
-        // 4. Pastikan kamera terputus seketika saat pengguna me-refresh halaman atau menutup tab
-        window.addEventListener('beforeunload', () => {
-            turnOffCamera();
-        });
-      
+        window.addEventListener('blur', () => turnOffCamera());
+        window.addEventListener('focus', () => { const c = UI.el('tab-content-absensi'); if (c && !c.classList.contains('hidden')) setTimeout(() => { initCamera(); }, 200); });
+        window.addEventListener('beforeunload', () => turnOffCamera());
     });
-
 </script>
 </body>
 </html>
