@@ -1315,6 +1315,7 @@
                 UI.el('attendance-status-text').innerHTML = `<span class="text-blue-500"><i class="fa-solid fa-circle-check"></i> Absensi hari ini telah selesai.</span>`;
                 setTimeout(() => introduceLogoutFeature(), 300);
             }
+            introduceNewTabs();
         } else {
             UI.toggleFlex('logged-in-section', false);
             UI.show('btn-login-modal'); UI.hide('btn-logout');
@@ -1479,7 +1480,7 @@
         tempOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
         tempOtpTimestamp = Date.now();
 
-        const waText = `*KODE OTP E-SLIP GAJI VIP*\n\nHalo ${tempOtpUser.name},\nKode OTP Anda untuk reset password adalah: *${tempOtpCode}*\n\n_Catatan: Kode ini hanya berlaku selama 5 menit._`;
+        const waText = `*KODE OTP APLIKASI ABSENSI*\n\nHalo ${tempOtpUser.name},\nKode OTP Anda untuk reset password adalah: *${tempOtpCode}*\n\n_Catatan: Kode ini hanya berlaku selama 5 menit._`;
         const fonnteToken = 'cAswYc8237BQhnuGWdBE';
 
         await fetch('https://api.fonnte.com/send', {
@@ -2022,6 +2023,130 @@
 
     UI.el('btn-cancel-login-otp').onclick = () => { UI.hide('wa-otp-modal'); if (appOtpInterval) clearInterval(appOtpInterval); UI.el('btn-logout').click(); };
   
+    // --- FITUR TOUR/ONBOARDING TAB BARU ---
+    window.showTabTooltip = function(step) {
+        let tooltip = UI.el('tabs-tooltip');
+        // Buat elemen tooltip jika belum ada
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = 'tabs-tooltip';
+            tooltip.className = 'fixed bg-blue-600 text-white p-4 rounded-xl shadow-2xl z-[100] w-[280px] sm:w-72 transition-all duration-300 transform opacity-0 translate-y-4 pointer-events-auto';
+            document.body.appendChild(tooltip);
+        }
+
+        const btnCalendar = UI.el('btn-tab-calendar');
+        const btnSlips = UI.el('btn-tab-slips');
+        let targetBtn = step === 1 ? btnCalendar : btnSlips;
+        
+        if (!targetBtn) return;
+
+        // Tentukan Konten Tooltip berdasarkan Langkah (Step)
+        if (step === 1) {
+            tooltip.innerHTML = `
+                <div class="relative">
+                    <div class="absolute -top-6 left-1/2 -translate-x-1/2 border-8 border-transparent border-b-blue-600"></div>
+                    <h4 class="font-bold text-sm mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-days text-yellow-300"></i> Fitur Baru!
+                    </h4>
+                    <p class="text-xs text-blue-100 mb-4 leading-relaxed">
+                        <b>Kalender Absensi:</b> Cek riwayat kehadiran dan selisih jam kerja Anda dengan lebih mudah.
+                    </p>
+                    <button id="btn-next-tab-tooltip" class="w-full bg-white text-blue-700 hover:bg-slate-100 text-xs font-bold py-2 rounded-lg transition-colors shadow-sm cursor-pointer">
+                        Lanjut
+                    </button>
+                </div>
+            `;
+        } else if (step === 2) {
+            tooltip.innerHTML = `
+                <div class="relative">
+                    <div class="absolute -top-6 left-1/2 -translate-x-1/2 border-8 border-transparent border-b-blue-600"></div>
+                    <h4 class="font-bold text-sm mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-receipt text-yellow-300"></i> Fitur Baru!
+                    </h4>
+                    <p class="text-xs text-blue-100 mb-4 leading-relaxed">
+                        <b>Slip Gaji:</b> Pantau riwayat slip gaji bulanan Anda secara langsung dari sini.
+                    </p>
+                    <button id="btn-finish-tab-tooltip" class="w-full bg-white text-blue-700 hover:bg-slate-100 text-xs font-bold py-2 rounded-lg transition-colors shadow-sm cursor-pointer">
+                        Lanjut & Buka Tab
+                    </button>
+                </div>
+            `;
+        }
+
+        // Hitung Posisi Tooltip agar tepat berada di bawah tombol tab yang bersangkutan
+        const rect = targetBtn.getBoundingClientRect();
+        tooltip.style.top = (rect.bottom + 12) + 'px'; 
+        
+        let leftPos = rect.left + (rect.width / 2) - 140; // 140 adalah setengah dari lebar tooltip (280px)
+        if (leftPos < 10) leftPos = 10; // Cegah terpotong di kiri layar
+        if (leftPos + 280 > window.innerWidth) leftPos = window.innerWidth - 290; // Cegah terpotong di kanan layar
+        tooltip.style.left = leftPos + 'px';
+
+        // Berikan Indikator Titik Berkedip (Ping Dot) pada tab yang sedang disorot
+        let dot = UI.el('tab-notif-dot');
+        if (dot) dot.remove();
+        
+        targetBtn.classList.add('relative');
+        dot = document.createElement('span');
+        dot.id = 'tab-notif-dot';
+        dot.className = 'absolute top-1 right-2 sm:right-4 flex h-3 w-3 z-50';
+        dot.innerHTML = `
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500 border border-white shadow-sm"></span>
+        `;
+        targetBtn.appendChild(dot);
+
+        // Munculkan Tooltip dengan animasi transisi
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                tooltip.classList.remove('opacity-0', 'translate-y-4');
+                tooltip.classList.add('opacity-100', 'translate-y-0');
+            }, 50);
+        });
+
+        // Tangani Aksi Tombol di dalam Tooltip
+        if (step === 1) {
+            document.getElementById('btn-next-tab-tooltip').onclick = () => {
+                dot.remove();
+                tooltip.classList.remove('opacity-100', 'translate-y-0');
+                tooltip.classList.add('opacity-0', 'translate-y-4');
+                
+                // Jeda sebentar untuk animasi tertutup, lalu pindah ke tab kalender & buka step 2
+                setTimeout(() => {
+                    switchAppTab('calendar');
+                    showTabTooltip(2);
+                }, 300);
+            };
+        } else if (step === 2) {
+            document.getElementById('btn-finish-tab-tooltip').onclick = () => {
+                dot.remove();
+                switchAppTab('slips'); // Pindah ke tab slip gaji sesuai instruksi Anda
+                
+                // Simpan data di local storage agar tour tidak muncul lagi di masa depan
+                localStorage.setItem('new_tabs_intro_shown', 'true');
+                
+                // Hilangkan tooltip
+                tooltip.classList.remove('opacity-100', 'translate-y-0');
+                tooltip.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => tooltip.remove(), 300);
+            };
+        }
+    };
+
+    window.introduceNewTabs = function() {
+        // Jika sudah pernah melihat tour ini, hentikan
+        if (localStorage.getItem('new_tabs_intro_shown')) return;
+        
+        const tabsContainer = UI.el('app-tabs-container');
+        if (!tabsContainer || tabsContainer.classList.contains('hidden')) return;
+
+        // Tunggu 1,5 detik setelah login agar UI stabil, baru munculkan tooltip Kalender (Step 1)
+        setTimeout(() => {
+            showTabTooltip(1);
+        }, 1500);
+    };
+    // --- AKHIR FITUR TOUR/ONBOARDING TAB BARU ---
+
     document.addEventListener('DOMContentLoaded', () => {
         if (typeof lucide !== 'undefined') lucide.createIcons();
         initClock(); initCamera(); initLocation(); refreshDashboardData(); checkLoginState();
