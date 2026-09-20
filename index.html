@@ -1480,7 +1480,7 @@
         tempOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
         tempOtpTimestamp = Date.now();
 
-        const waText = `*KODE OTP APLIKASI ABSENSI*\n\nHalo ${tempOtpUser.name},\nKode OTP Anda untuk reset password adalah: *${tempOtpCode}*\n\n_Catatan: Kode ini hanya berlaku selama 5 menit._`;
+        const waText = `*KODE OTP APLIKASI ABSENSI VIP PLUS*\n\nHalo ${tempOtpUser.name},\nKode OTP Anda untuk reset password adalah: *${tempOtpCode}*\n\n_Catatan: Kode ini hanya berlaku selama 5 menit._`;
         const fonnteToken = 'cAswYc8237BQhnuGWdBE';
 
         await fetch('https://api.fonnte.com/send', {
@@ -1992,7 +1992,7 @@
     window.sendAppOtp = async function() {
         appOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
         appOtpTimestamp = Date.now();
-        const waText = `*KODE AKSES APLIKASI ABSENSI*\n\nHalo ${currentUser.name},\nKode OTP Anda untuk masuk ke aplikasi adalah: *${appOtpCode}*\n\n_Catatan: Kode ini hanya berlaku 5 menit._`;
+        const waText = `*KODE AKSES APLIKASI ABSENSI VIP PLUS*\n\nHalo ${currentUser.name},\nKode OTP Anda untuk masuk ke aplikasi adalah: *${appOtpCode}*\n\n_Catatan: Kode ini hanya berlaku 5 menit._`;
         
         try {
             await fetch('https://api.fonnte.com/send', {
