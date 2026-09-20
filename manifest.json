@@ -1,7 +1,7 @@
 {
-  "name": "Sistem Absensi Karyawan",
-  "short_name": "Absensi",
-  "description": "Aplikasi absensi karyawan dengan verifikasi wajah",
+  "name": "Absensi VIP Plus",
+  "short_name": "VIP Plus",
+  "description": "Sistem Absensi VIP Plus, Kalender, & Slip Gaji",
   "start_url": "./?mode=pwa", 
   "display": "fullscreen",
   "background_color": "#f8fafc",
