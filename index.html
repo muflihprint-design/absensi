@@ -1377,6 +1377,7 @@
         currentUser = null;
         localStorage.removeItem('attendance_user');
         localStorage.removeItem('attendance_slips');
+        sessionStorage.removeItem('app_unlocked');
         showToast("Logout", "Anda telah keluar ke mode manual.", "info");
         
         UI.el('slips-container').innerHTML = '';
