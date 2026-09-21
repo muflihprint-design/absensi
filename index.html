@@ -1681,18 +1681,33 @@
         } catch(e) {}
     }
 
-    function updatePeriods() {
-        const filter = UI.el('periodFilter'); let optionsHTML = ''; 
-        const start = parseStartDate(AppState.user?.start_date), todayUTC = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
-        let currentPeriodIdx = 0;
-        for (let i = 0; i < 12; i++) {
-            const dStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, start.getUTCDate()));
-            const dEnd = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth() + 1, dStart.getUTCDate() - 1));
-            if (todayUTC >= dStart) currentPeriodIdx = i;
-            optionsHTML += `<option value="${i}">Periode ${dStart.getUTCDate()} ${dStart.toLocaleString('id-ID', {month:'short', timeZone: 'UTC'})} - ${dEnd.getUTCDate()} ${dEnd.toLocaleString('id-ID', {month:'short', timeZone: 'UTC'})} ${dEnd.getUTCFullYear()}</option>`;
-        }
-        filter.innerHTML = optionsHTML; filter.value = currentPeriodIdx; renderCalendar();
+  function updatePeriods() {
+    const filter = UI.el('periodFilter'); 
+    const filterSlips = UI.el('periodFilterSlips');
+    let optionsHTML = ''; 
+    const start = parseStartDate(AppState.user?.start_date), todayUTC = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()));
+    let currentPeriodIdx = 0;
+    
+    // 1. Tambahkan kode untuk menghitung total periode (selisih bulan dari awal bekerja hingga hari ini)
+    let totalPeriods = (todayUTC.getUTCFullYear() - start.getUTCFullYear()) * 12 + (todayUTC.getUTCMonth() - start.getUTCMonth()) + 1;
+    // Pastikan minimal selalu ada 1 periode meskipun hasilnya kurang dari 1
+    if (totalPeriods < 1) totalPeriods = 1;
+    
+    // 2. Ganti angka 12 pada perulangan di bawah ini dengan variabel totalPeriods
+    for (let i = 0; i < totalPeriods; i++) {
+        const dStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + i, start.getUTCDate()));
+        const dEnd = new Date(Date.UTC(dStart.getUTCFullYear(), dStart.getUTCMonth() + 1, dStart.getUTCDate() - 1));
+        if (todayUTC >= dStart) currentPeriodIdx = i;
+        optionsHTML += `<option value="${i}">Periode ${dStart.getUTCDate()} ${dStart.toLocaleString('id-ID', {month:'short', timeZone: 'UTC'})} - ${dEnd.getUTCDate()} ${dEnd.toLocaleString('id-ID', {month:'short', timeZone: 'UTC'})} ${dEnd.getUTCFullYear()}</option>`;
     }
+    
+    // Memperbarui kedua dropdown agar identik (scrol dari class di html)
+    if (filter) { filter.innerHTML = optionsHTML; filter.value = currentPeriodIdx; }
+    if (filterSlips) { filterSlips.innerHTML = optionsHTML; filterSlips.value = currentPeriodIdx; }
+    
+    renderCalendar();
+    renderSlipsView();
+}
 
     function renderCalendar() {
         const kary = AppState.user; if (!kary) return; 
