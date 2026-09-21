@@ -2170,12 +2170,10 @@
         if (inputKode) inputKode.addEventListener('focus', () => setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 300));
         
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') turnOffCamera(); 
-            else if (document.visibilityState === 'visible') { const c = UI.el('tab-content-absensi'); if (c && !c.classList.contains('hidden')) initCamera(); }
-        });
-        window.addEventListener('blur', () => turnOffCamera());
-        window.addEventListener('focus', () => { const c = UI.el('tab-content-absensi'); if (c && !c.classList.contains('hidden')) setTimeout(() => { initCamera(); }, 200); });
-        window.addEventListener('beforeunload', () => turnOffCamera());
+    if (document.visibilityState === 'hidden') turnOffCamera(); 
+    else if (document.visibilityState === 'visible') { const c = UI.el('tab-content-absensi'); if (c && !c.classList.contains('hidden')) initCamera(); }
+});
+window.addEventListener('beforeunload', () => turnOffCamera());
     });
 </script>
 </body>
