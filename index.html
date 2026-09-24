@@ -507,6 +507,10 @@
 </main>
 
 <script>
+
+  let tempFpWaNumber = null;
+let tempAppWaNumber = null;
+
     // --- HELPER FUNCTIONS ---
     const UI = {
         el: (id) => document.getElementById(id),
@@ -1233,30 +1237,47 @@
         };
     }
 
-    async function checkLoginState(isAfterLogout = false) {
+async function checkLoginState(isAfterLogout = false) {
         const isAppMode = window.matchMedia('(display-mode: standalone)').matches || 
             window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: minimal-ui)').matches || 
             window.navigator.standalone === true || document.referrer.includes('android-app://') || window.location.search.includes('mode=pwa');
 
         if (currentUser) {
-            if (!sessionStorage.getItem('app_unlocked')) {
+            // TAMBAHAN: Deteksi ketat jika cache browser versi lama tidak punya data WA
+            const isWaMissingInCache = !currentUser.wa_number || currentUser.wa_number.trim() === "";
+
+            // Jika aplikasi belum di-unlock di sesi ini ATAU cache lama tidak punya nomor WA, PAKSA cek ke database
+            if (!sessionStorage.getItem('app_unlocked') || isWaMissingInCache) {
                 try {
                     const { data: dbUser, error } = await supabaseClient.from('employees').select('wa_number').eq('code', currentUser.code).single();
                     if (error) throw error;
+                    
                     if (dbUser && dbUser.wa_number) {
+                        // Jika di database ada, update cache lokal dan izinkan masuk
                         sessionStorage.setItem('app_unlocked', 'true');
                         currentUser.wa_number = dbUser.wa_number;
                         localStorage.setItem('attendance_user', JSON.stringify(currentUser));
                     } else {
+                        // JIKA DI DATABASE KOSONG: Cabut paksa akses dan kurung di modal OTP
+                        sessionStorage.removeItem('app_unlocked');
+                        
+                        // Sembunyikan elemen background agar tidak bocor terlihat
+                        UI.hide('manual-input-section'); 
+                        UI.hide('profile-admin-container');
+                        UI.hide('app-tabs-container');
+                        
+                        // Munculkan verifikasi
                         if (typeof startWaOtpVerification === "function") startWaOtpVerification();
-                        return; 
+                        return; // HENTIKAN PROSES DI SINI, JANGAN RENDER DASHBOARD
                     }
                 } catch (error) {
+                    sessionStorage.removeItem('app_unlocked');
                     if (typeof startWaOtpVerification === "function") startWaOtpVerification();
                     return;
                 }
             }
 
+            // --- Jika lolos validasi WA, LANJUT BUKA APLIKASI ---
             UI.hide('manual-input-section');
             UI.toggleFlex('logged-in-section', true);
             UI.hide('btn-login-modal'); UI.show('btn-logout');
@@ -1317,6 +1338,7 @@
             }
             introduceNewTabs();
         } else {
+            // (Bagian else tetap dibiarkan sama persis seperti kode sebelumnya)
             UI.toggleFlex('logged-in-section', false);
             UI.show('btn-login-modal'); UI.hide('btn-logout');
             UI.hide('btn-auto-check-in'); UI.hide('btn-check-out');
@@ -1983,11 +2005,28 @@
     }
     window.addEventListener('appinstalled', () => showMandatoryScreen('installing'));
 
-    // --- SISTEM VERIFIKASI WA & OTP AKSES APLIKASI ---
-    window.startWaOtpVerification = function() {
+// --- SISTEM VERIFIKASI WA & OTP AKSES APLIKASI ---
+    window.startWaOtpVerification = function(isUpdate = false) {
+        pendingWaNumber = ""; // Reset variabel
         UI.show('wa-otp-modal');
-        if (!currentUser.wa_number || currentUser.wa_number.trim() === "") { UI.show('step-input-wa'); UI.hide('step-verify-otp'); } 
-        else { UI.hide('step-input-wa'); UI.show('step-verify-otp'); sendAppOtp(); }
+        
+        if (isUpdate || !currentUser.wa_number || currentUser.wa_number.trim() === "") { 
+            UI.show('step-input-wa'); 
+            UI.hide('step-verify-otp'); 
+            UI.el('input-wa-number').value = "";
+            
+            // Sesuaikan teks info berdasarkan kondisinya
+            const infoBox = UI.el('step-input-wa').querySelector('.bg-blue-50');
+            if(infoBox) {
+                infoBox.innerHTML = isUpdate 
+                    ? "Silakan masukkan nomor WhatsApp baru Anda. Kode OTP akan dikirim ke nomor ini."
+                    : "Nomor WhatsApp Anda belum terdaftar. Silakan masukkan nomor WA aktif untuk menerima kode akses.";
+            }
+        } else { 
+            UI.hide('step-input-wa'); 
+            UI.show('step-verify-otp'); 
+            sendAppOtp(); 
+        }
     };
 
     async function saveWaNumber(e) {
@@ -1995,27 +2034,29 @@
         let waNumber = UI.el('input-wa-number').value.trim();
         if (waNumber.startsWith('0')) waNumber = '62' + waNumber.substring(1);
 
-        await withLoading('btn-save-wa', 'Menyimpan...', async () => {
-            const { error } = await supabaseClient.from('employees').update({ wa_number: waNumber }).eq('code', currentUser.code);
-            if (error) { alert("Gagal menyimpan nomor WA: " + error.message); return; }
-            currentUser.wa_number = waNumber; localStorage.setItem('attendance_user', JSON.stringify(currentUser));
-            showToast("Sukses", "Nomor WA berhasil disimpan.", "success");
-            UI.hide('step-input-wa'); UI.show('step-verify-otp'); sendAppOtp();
-        });
+        // HANYA simpan di variabel sementara, JANGAN panggil Supabase dulu
+        pendingWaNumber = waNumber; 
+        
+        UI.hide('step-input-wa'); 
+        UI.show('step-verify-otp'); 
+        sendAppOtp();
     }
 
     window.sendAppOtp = async function() {
+        // Prioritaskan nomor baru jika sedang update, jika tidak pakai nomor existing
+        const targetNumber = pendingWaNumber || currentUser.wa_number;
+        
         appOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
         appOtpTimestamp = Date.now();
-        const waText = `*KODE AKSES APLIKASI ABSENSI VIP PLUS*\n\nHalo ${currentUser.name},\nKode OTP Anda untuk masuk ke aplikasi adalah: *${appOtpCode}*\n\n_Catatan: Kode ini hanya berlaku 5 menit._`;
+        const waText = `*KODE AKSES APLIKASI ABSENSI VIP PLUS*\n\nHalo ${currentUser.name},\nKode OTP Anda adalah: *${appOtpCode}*\n\n_Catatan: Kode ini hanya berlaku 5 menit._`;
         
         try {
             await fetch('https://api.fonnte.com/send', {
                 method: 'POST', headers: { 'Authorization': 'cAswYc8237BQhnuGWdBE', 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ target: currentUser.wa_number, message: waText })
+                body: new URLSearchParams({ target: targetNumber, message: waText })
             });
 
-            UI.el('app-otp-info').innerHTML = `Kode OTP dikirim ke WA <b>${maskPhoneNumber(currentUser.wa_number)}</b>.<br><span class="block mt-1.5 pt-1.5 border-t border-emerald-200/60 text-[10px] text-emerald-700">Pengirim: <b class="text-xs">6285823253354</b></span>`;
+            UI.el('app-otp-info').innerHTML = `Kode OTP dikirim ke WA <b>${maskPhoneNumber(targetNumber)}</b>.<br><span class="block mt-1.5 pt-1.5 border-t border-emerald-200/60 text-[10px] text-emerald-700">Pengirim: <b class="text-xs">6285823253354</b></span>`;
             UI.el('input-app-otp').value = "";
             
             if (appOtpInterval) clearInterval(appOtpInterval);
@@ -2029,15 +2070,42 @@
 
         if (UI.el('input-app-otp').value.trim() === appOtpCode) {
             if (appOtpInterval) clearInterval(appOtpInterval);
-            sessionStorage.setItem('app_unlocked', 'true');
-            UI.hide('wa-otp-modal');
-            showToast("Akses Diberikan", "Verifikasi berhasil.", "success");
-            checkLoginState();
-        } else alert("Kode OTP salah!");
+            
+            // JIKA ada nomor pending (sedang tambah baru/ubah nomor), SIMPAN ke database sekarang
+            if (pendingWaNumber) {
+                await withLoading('btn-verify-otp', 'Menyimpan...', async () => {
+                    const { error } = await supabaseClient.from('employees').update({ wa_number: pendingWaNumber }).eq('code', currentUser.code);
+                    if (error) { alert("Gagal menyimpan nomor WA: " + error.message); return; }
+                    
+                    currentUser.wa_number = pendingWaNumber; 
+                    localStorage.setItem('attendance_user', JSON.stringify(currentUser));
+                    pendingWaNumber = ""; // Reset
+                    
+                    finalizeAppVerification("Nomor WA berhasil diverifikasi dan disimpan.");
+                });
+            } else {
+                // Kasus verifikasi OTP saat login biasa (sudah ada nomor)
+                finalizeAppVerification("Verifikasi berhasil.");
+            }
+        } else {
+            alert("Kode OTP salah!");
+        }
     }
 
-    UI.el('btn-cancel-login-otp').onclick = () => { UI.hide('wa-otp-modal'); if (appOtpInterval) clearInterval(appOtpInterval); UI.el('btn-logout').click(); };
-  
+    function finalizeAppVerification(successMsg) {
+        sessionStorage.setItem('app_unlocked', 'true');
+        UI.hide('wa-otp-modal');
+        showToast("Akses Diberikan", successMsg, "success");
+        checkLoginState();
+    }
+
+    UI.el('btn-cancel-login-otp').onclick = () => { 
+        UI.hide('wa-otp-modal'); 
+        if (appOtpInterval) clearInterval(appOtpInterval); 
+        pendingWaNumber = "";
+        UI.el('btn-logout').click(); 
+    };
+ 
     // --- FITUR TOUR/ONBOARDING TAB BARU ---
     window.showTabTooltip = function(step) {
         let tooltip = UI.el('tabs-tooltip');
