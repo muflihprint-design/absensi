@@ -266,6 +266,19 @@
                     <input type="password" id="confirm-new-password" class="pl-9 w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition-colors" placeholder="Ulangi password baru Anda">
                 </div>
             </div>
+            
+            <!-- TAMBAHAN BAGIAN UBAH WA -->
+            <div class="pt-4 pb-2 border-t border-slate-100 flex justify-between items-center">
+                <div class="text-sm">
+                    <p class="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-0.5">Nomor WA Saat Ini:</p>
+                    <p class="font-medium text-slate-700" id="current-wa-display">-</p>
+                </div>
+                <button type="button" onclick="initiateChangeWA()" class="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-bold transition-colors shadow-sm">
+                    Ubah Nomor WA
+                </button>
+            </div>
+            <!-- AKHIR TAMBAHAN BAGIAN UBAH WA -->
+
             <div class="pt-2">
                 <button type="submit" id="btn-save-profile" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2">
                     Simpan Perubahan
@@ -593,6 +606,7 @@ let tempAppWaNumber = null;
     let isAutoCheckInRunning = false;
     let appOtpCode = "", appOtpTimestamp = 0;
     let appOtpInterval = null;
+    let pendingWaNumber = "";
 
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobi/i.test(navigator.userAgent) || window.innerWidth < 768;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -1553,18 +1567,29 @@ async function checkLoginState(isAfterLogout = false) {
         });
     }
 
-    // Profil dan Settings
+   // Profil dan Settings
     function openEditModal() {
         const sessionData = localStorage.getItem("attendance_user");
         if (sessionData) {
             const sessionUser = JSON.parse(sessionData);
             UI.el('new-username').value = sessionUser.username || sessionUser.name;
             UI.el('new-password').value = ""; UI.el('confirm-new-password').value = ""; 
+            
+            // Tampilkan nomor WA yang saat ini tersimpan (disamarkan)
+            if(UI.el('current-wa-display')) {
+                UI.el('current-wa-display').innerText = sessionUser.wa_number ? maskPhoneNumber(sessionUser.wa_number) : "Belum Diatur";
+            }
         }
         UI.show('edit-profile-modal');
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
+    // Fungsi untuk memicu perubahan WA dari modal profil
+    window.initiateChangeWA = function() {
+        closeEditModal(); 
+        startWaOtpVerification(true); // Panggil modal verifikasi dengan status update = true
+    };
+    
     function closeEditModal() { UI.hide('edit-profile-modal'); }
 
     UI.el('edit-profile-form').addEventListener('submit', async (e) => {
