@@ -1470,10 +1470,11 @@ async function checkLoginState(isAfterLogout = false) {
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
-    function closeForgotPassword() {
+  function closeForgotPassword() {
         UI.hide('forgot-password-modal');
         UI.show('login-modal');
         if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+        tempFpWaNumber = null; // Tambahkan ini agar nomor yang batal tersimpan terhapus
     }
 
     function maskPhoneNumber(phone) {
@@ -1499,15 +1500,15 @@ async function checkLoginState(isAfterLogout = false) {
         });
     }
 
-    async function saveWaAndSendOtp(e) {
+  async function saveWaAndSendOtp(e) {
         e.preventDefault();
         let waNumber = UI.el('fp-input-wa').value.trim();
         if (waNumber.startsWith('0')) waNumber = '62' + waNumber.substring(1);
 
-        await withLoading('btn-fp-save-wa', 'Menyimpan...', async () => {
-            const { error } = await supabaseClient.from('employees').update({ wa_number: waNumber }).eq('code', tempOtpUser.code);
-            if (error) { alert("Gagal menyimpan nomor WA: " + error.message); return; }
-            tempOtpUser.wa_number = waNumber;
+        // HANYA simpan di variabel sementara, JANGAN panggil Supabase dulu
+        tempFpWaNumber = waNumber;
+
+        await withLoading('btn-fp-save-wa', 'Mengirim OTP...', async () => {
             await processSendFpOtp(waNumber);
         });
     }
@@ -1532,7 +1533,7 @@ async function checkLoginState(isAfterLogout = false) {
         otpCountdownInterval = startOtpTimer('otp-timer', 'btn-reset-pass', tempOtpTimestamp);
     }
 
-   async function verifyAndResetPassword(e) {
+ async function verifyAndResetPassword(e) {
         e.preventDefault();
         const otpInput = UI.el('fp-otp').value.trim();
         const newPass = UI.el('fp-new-pass').value.trim();
@@ -1543,8 +1544,22 @@ async function checkLoginState(isAfterLogout = false) {
         if (newPass !== confirmPass) { alert("Gagal: Password baru dan konfirmasi tidak cocok!"); return; }
 
         await withLoading('btn-reset-pass', 'Menyimpan...', async () => {
-            const { error } = await supabaseClient.from('employees').update({ password: newPass }).eq('code', tempOtpUser.code);
+            // Siapkan data yang akan diupdate (Password)
+            let updateData = { password: newPass };
+            
+            // Jika ada nomor WA yang tertunda (user baru memasukkan WA), ikut sertakan untuk disimpan
+            if (tempFpWaNumber) {
+                updateData.wa_number = tempFpWaNumber;
+            }
+
+            // Simpan ke database Supabase
+            const { error } = await supabaseClient.from('employees').update(updateData).eq('code', tempOtpUser.code);
             if (error) { alert("Terjadi kesalahan sistem: " + error.message); return; }
+            
+            // Update cache lokal sementara agar proses login otomatis berhasil mulus
+            if (tempFpWaNumber) {
+                tempOtpUser.wa_number = tempFpWaNumber;
+            }
             
             showToast("Sukses!", "Password berhasil direset. Melakukan login otomatis...", "success");
             
@@ -1589,7 +1604,7 @@ async function checkLoginState(isAfterLogout = false) {
         closeEditModal(); 
         startWaOtpVerification(true); // Panggil modal verifikasi dengan status update = true
     };
-    
+
     function closeEditModal() { UI.hide('edit-profile-modal'); }
 
     UI.el('edit-profile-form').addEventListener('submit', async (e) => {
