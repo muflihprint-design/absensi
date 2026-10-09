@@ -368,6 +368,9 @@
         <button onclick="switchAppTab('absensi')" id="btn-tab-absensi" class="flex-1 py-3 text-sm font-semibold text-emerald-600 border-b-2 border-emerald-600 focus:outline-none flex items-center justify-center gap-2 transition-colors">
             <i class="fa-solid fa-camera"></i> Absensi
         </button>
+        <button onclick="switchAppTab('tasks')" id="btn-tab-tasks" class="flex-1 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700 focus:outline-none flex items-center justify-center gap-2 transition-colors">
+            <i class="fa-solid fa-list-check"></i> Tugas
+        </button>
         <button onclick="switchAppTab('calendar')" id="btn-tab-calendar" class="flex-1 py-3 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700 focus:outline-none flex items-center justify-center gap-2 transition-colors">
             <i data-lucide="calendar-days" class="w-4 h-4"></i> Kalender
         </button>
@@ -462,6 +465,45 @@
 
             <div id="daily-attendance-summary" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm transition-all duration-300"></div>
         </section>
+    </div>
+
+  <!-- TAB DAFTAR TUGAS -->
+    <div id="tab-content-tasks" class="hidden">
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 mb-6 min-h-[250px]">
+            
+            <!-- Header (Teks Dihilangkan, Badge dipindah ke Kanan) -->
+            <div class="flex justify-end items-center mb-2">
+                <span id="task-progress-badge" class="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-full border border-emerald-200 flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-list-check"></i> 0/0 Selesai
+                </span>
+            </div>
+            
+            <!-- State: Loading -->
+            <div id="task-loading" class="hidden flex flex-col items-center justify-center py-10">
+                <div class="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mb-3">
+                    <i class="fa-solid fa-spinner fa-spin text-emerald-500 text-2xl"></i>
+                </div>
+                <h4 class="text-sm font-bold text-slate-700">Sinkronisasi Data</h4>
+                <p class="text-xs text-slate-500 mt-1">Memuat daftar tugas Anda...</p>
+            </div>
+            
+            <!-- State: Kosong -->
+            <div id="task-empty" class="hidden text-center bg-slate-50 rounded-xl p-8 border border-slate-200 border-dashed mt-2 transition-all">
+                <div class="w-14 h-14 bg-white text-slate-300 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100 text-2xl">
+                    <i class="fa-solid fa-mug-hot"></i>
+                </div>
+                <h4 class="text-sm font-bold text-slate-700 mb-1">Bebas Tugas</h4>
+                <p class="text-xs text-slate-500 max-w-[200px] mx-auto leading-relaxed">
+                    Anda tidak memiliki tugas aktif atau tunggakan saat ini.
+                </p>
+            </div>
+
+            <!-- Kontainer Daftar Tugas -->
+            <div id="tasks-container" class="space-y-4 mt-2">
+                <!-- Daftar tugas akan dirender oleh JavaScript -->
+            </div>
+            
+        </div>
     </div>
 
     <!-- TAB KALENDER ABSENSI -->
@@ -636,7 +678,7 @@ let tempAppWaNumber = null;
 
     // Tab Navigation Logic Refactored
     function switchAppTab(tabId) {
-        ['absensi', 'calendar', 'slips'].forEach(t => {
+        ['absensi', 'calendar', 'slips', 'tasks'].forEach(t => {
             const btn = UI.el(`btn-tab-${t}`);
             const isActive = (t === tabId);
             if (btn) {
@@ -646,7 +688,371 @@ let tempAppWaNumber = null;
         });
 
         if (tabId === 'absensi') initCamera(); else turnOffCamera();
+    if (tabId === 'tasks') loadDailyTasks();
     }
+
+// ==========================================
+// FUNGSI BANTUAN WAKTU & TANGGAL
+// ==========================================
+function isSameWeek(dateStr) {
+    const taskDate = parseDateLocalSafe(dateStr);
+    const today = new Date();
+    taskDate.setHours(0,0,0,0); today.setHours(0,0,0,0);
+    const day = today.getDay(); 
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diffToMonday);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return taskDate >= monday && taskDate <= sunday;
+}
+
+function isSameMonth(dateStr) {
+    const taskDate = parseDateLocalSafe(dateStr);
+    const today = new Date();
+    return taskDate.getMonth() === today.getMonth() && taskDate.getFullYear() === today.getFullYear();
+}
+
+function parseDateLocalSafe(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function formatDateObj(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// Digunakan untuk pre-generate tanggal tugas ke depan
+function getDatesForTask(task, baseDate) {
+    let targetDates = [];
+    
+    if (task.schedule_type === 'harian') {
+        targetDates.push(formatDateObj(baseDate));
+    } else if (task.task_type === 'sekali') {
+        // Untuk tugas 'sekali', gunakan schedule_date sebagai timestamp atau tanggal tertentu
+        // Asumsi: schedule_date di tabel diisi dengan unix timestamp atau format YYYYMMDD.
+        // Jika formatnya hanya angka tanggal (1-31), kita gunakan bulan/tahun saat ini.
+        if (task.schedule_date) {
+             const target = new Date(baseDate.getFullYear(), baseDate.getMonth(), task.schedule_date);
+             targetDates.push(formatDateObj(target));
+        } else {
+             // Fallback jika schedule_date null, set hari ini
+             targetDates.push(formatDateObj(baseDate));
+        }
+    } else if (task.schedule_type === 'mingguan') {
+        let days = task.schedule_days;
+        if (typeof days === 'string') days = days.replace(/[{}]/g, '').split(',').map(Number);
+        if (!days) return targetDates;
+
+        const day = baseDate.getDay();
+        const diffToMonday = day === 0 ? -6 : 1 - day;
+        const monday = new Date(baseDate);
+        monday.setDate(baseDate.getDate() + diffToMonday);
+
+        days.forEach(d => {
+            const target = new Date(monday);
+            const addDays = d === 0 ? 6 : d - 1; // 0 di JS adalah Minggu, diasumsikan index database (0=Minggu, 1=Senin)
+            target.setDate(monday.getDate() + addDays);
+            targetDates.push(formatDateObj(target));
+        });
+    } else if (task.schedule_type === 'bulanan') {
+        const target = new Date(baseDate.getFullYear(), baseDate.getMonth(), task.schedule_date);
+        targetDates.push(formatDateObj(target));
+    }
+    return targetDates;
+}
+// ==========================================
+// ==========================================
+// FUNGSI TUGAS HARIAN (TAMPILAN UI)
+// ==========================================
+async function loadDailyTasks() {
+    if (!currentUser) return;
+    UI.show('task-loading'); UI.hide('task-empty'); UI.el('tasks-container').innerHTML = '';
+    
+    // SAFETY NET: Jalankan generator tugas jika ada pembaruan di siklus ini
+    await generateAndSendDailyTasks(currentUser);
+    
+    const todayStr = getLocalDateString();
+    const todayDate = new Date();
+    // Tarik data tugas mulai dari awal bulan ini untuk mencakup bulanan dan mingguan
+    const startOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+    
+    // 1. Tarik log tugas
+    const { data: rawTasks, error: logErr } = await supabaseClient.from('daily_task_logs')
+        .select('*')
+        .eq('pic_id', currentUser.id)
+        .or(`task_date.gte.${formatDateObj(startOfMonth)},is_completed.eq.false`)
+        .order('task_date', { ascending: true })
+        .order('id');
+        
+    // 2. Tarik master tugas untuk mengecek tipe jadwal (harian/mingguan/bulanan)
+    const { data: masterTasks, error: masterErr } = await supabaseClient.from('employee_tasks')
+        .select('id, schedule_type, task_type')
+        .eq('pic_id', currentUser.id);
+
+    UI.hide('task-loading');
+    if (logErr) { showToast("Error Supabase", logErr.message, "error"); return; }
+    if (!rawTasks || rawTasks.length === 0) {
+        UI.show('task-empty'); UI.el('task-progress-badge').innerText = "0/0 Selesai"; return;
+    }
+
+    // 3. Kelompokkan Data
+    let grouped = { harian: [], sekali: [], mingguan: [], bulanan: [] };
+    let totalTasks = 0; let completedTasks = 0;
+
+    rawTasks.forEach(task => {
+        const master = masterTasks ? masterTasks.find(m => m.id === task.task_id) : null;
+        const schedType = master ? master.schedule_type : 'harian';
+        const taskType = master ? master.task_type : 'rutin';
+
+        let group = 'harian';
+        let isValidForView = false;
+
+        if (taskType === 'sekali') {
+            group = 'sekali';
+            isValidForView = task.task_date === todayStr || (!task.is_completed && task.task_date < todayStr) || task.task_date > todayStr;
+        } else if (schedType === 'mingguan') {
+            group = 'mingguan';
+            isValidForView = isSameWeek(task.task_date) || (!task.is_completed && task.task_date < todayStr);
+        } else if (schedType === 'bulanan') {
+            group = 'bulanan';
+            isValidForView = isSameMonth(task.task_date) || (!task.is_completed && task.task_date < todayStr);
+        } else {
+            group = 'harian';
+            isValidForView = task.task_date === todayStr || (!task.is_completed && task.task_date < todayStr);
+        }
+
+        if (isValidForView) {
+            grouped[group].push(task);
+            totalTasks++;
+            if (task.is_completed) completedTasks++;
+        }
+    });
+
+    if (totalTasks === 0) { UI.show('task-empty'); UI.el('task-progress-badge').innerText = "0/0 Selesai"; return; }
+
+    UI.el('task-progress-badge').innerText = `${completedTasks}/${totalTasks} Selesai`;
+    
+    // 4. Render ke HTML
+    let taskHTML = '';
+    const groupTitles = { 
+        harian: '<i class="fa-solid fa-sun text-amber-500 mr-2"></i>Tugas Harian', 
+        sekali: '<i class="fa-solid fa-bolt text-blue-500 mr-2"></i>Tugas Sekali', 
+        mingguan: '<i class="fa-solid fa-calendar-week text-indigo-500 mr-2"></i>Tugas Mingguan', 
+        bulanan: '<i class="fa-solid fa-calendar-days text-emerald-500 mr-2"></i>Tugas Bulanan' 
+    };
+
+    for (const key of ['harian', 'sekali', 'mingguan', 'bulanan']) {
+        if (grouped[key].length > 0) {
+            taskHTML += `<h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mt-5 mb-3 border-b border-slate-100 pb-1">${groupTitles[key]}</h4>`;
+            
+            grouped[key].forEach(task => {
+                const isChecked = task.is_completed ? 'checked' : '';
+                const textStyle = task.is_completed ? 'line-through text-slate-400' : 'text-slate-700 font-medium';
+                const bgStyle = task.is_completed ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-white border-emerald-200 shadow-sm';
+                
+                let dateLabel = "";
+                if (task.is_completed && task.completed_at) {
+                    const cDate = new Date(task.completed_at);
+                    dateLabel = `<span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded block mt-1 w-max"><i class="fa-solid fa-check mr-1"></i>Selesai: ${cDate.getDate()} ${cDate.toLocaleString('id-ID', {month:'short'})}</span>`;
+                } else {
+                    const tDate = parseDateLocalSafe(task.task_date);
+                    const tglString = `${tDate.getDate()} ${tDate.toLocaleString('id-ID', {month:'short'})}`;
+                    if (task.task_date < todayStr) {
+                        dateLabel = `<span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded block mt-1 w-max font-bold"><i class="fa-solid fa-circle-exclamation mr-1"></i>Tunggakan: ${tglString}</span>`;
+                    } else if (key !== 'harian') { 
+                        // HILANGKAN TAMPILAN TARGET KHUSUS UNTUK TUGAS HARIAN
+                        dateLabel = `<span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded block mt-1 w-max"><i class="fa-solid fa-bullseye mr-1"></i>Target: ${tglString}</span>`;
+                    }
+                }
+                
+                taskHTML += `
+                    <div class="flex items-start gap-3 p-3 rounded-xl border ${bgStyle} transition-all mb-2">
+                        <input type="checkbox" id="task-${task.id}" ${isChecked} onchange="toggleTaskCompletion(${task.id}, this.checked)" class="mt-1 w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer">
+                        <label for="task-${task.id}" class="text-sm ${textStyle} cursor-pointer select-none flex-1 leading-tight">
+                            ${task.task_name}
+                            ${dateLabel}
+                        </label>
+                    </div>
+                `;
+            });
+        }
+    }
+    UI.el('tasks-container').innerHTML = taskHTML;
+}
+
+window.toggleTaskCompletion = async function(taskId, isCompleted) {
+    // Gunakan zona waktu Makassar (WITA) karena Supabase sudah diset ke timestamp without time zone
+    const waktuLokal = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Makassar' });
+
+    await supabaseClient.from('daily_task_logs').update({ 
+        is_completed: isCompleted, 
+        completed_at: isCompleted ? waktuLokal : null 
+    }).eq('id', taskId);
+    
+    loadDailyTasks(); // Refresh list agar badge/teks terupdate
+};
+
+// ==========================================
+// GENERATOR TUGAS & NOTIFIKASI WHATSAPP
+// ==========================================
+async function generateAndSendDailyTasks(user, skipWa = false) {
+    try {
+        const todayDate = new Date();
+        const todayStr = getLocalDateString();
+        
+        // 1. Tarik master tugas
+        const { data: masterTasks, error: masterErr } = await supabaseClient.from('employee_tasks')
+            .select('*').eq('pic_id', user.id).eq('is_active', true);
+            
+        if (masterErr) throw masterErr;
+        if (!masterTasks || masterTasks.length === 0) return;
+
+        // 2. Tarik log bulan ini untuk mencegah duplikasi pembuatan data periode yang sama
+        const startOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+        const endOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0);
+
+        const { data: existingLogs } = await supabaseClient.from('daily_task_logs')
+            .select('task_id, task_date')
+            .eq('pic_id', user.id)
+            .gte('task_date', formatDateObj(startOfMonth))
+            .lte('task_date', formatDateObj(endOfMonth));
+
+        const existingSet = new Set((existingLogs || []).map(l => `${l.task_id}_${l.task_date}`));
+
+        let logsToInsert = [];
+        let onceTasksToDeactivate = [];
+
+        masterTasks.forEach(task => {
+            const targetDates = getDatesForTask(task, todayDate);
+            targetDates.forEach(dateStr => {
+                if (!existingSet.has(`${task.id}_${dateStr}`)) {
+                    logsToInsert.push({
+                        pic_id: user.id,
+                        task_id: task.id,
+                        task_name: task.task_name,
+                        task_date: dateStr,
+                        is_completed: false
+                    });
+                    if (task.task_type === 'sekali') onceTasksToDeactivate.push(task.id);
+                }
+            });
+        });
+
+        // Simpan tugas baru ke log & nonaktifkan tipe 'sekali'
+        if (logsToInsert.length > 0) {
+            const { error: insertErr } = await supabaseClient.from('daily_task_logs').insert(logsToInsert);
+            if (insertErr) throw insertErr;
+            if (onceTasksToDeactivate.length > 0) await supabaseClient.from('employee_tasks').update({ is_active: false }).in('id', onceTasksToDeactivate);
+        } else {
+            return; // HENTIKAN JIKA TIDAK ADA TUGAS BARU DIGENERATE HARI INI AGAR TIDAK SPAM WA
+        }
+
+        // --- CEK PARAMETER: Jika dipanggil dari sistem realtime, lewati pengiriman WA ---
+        if (skipWa) return; 
+
+        // 3. AMBIL DATA UNTUK WA (Format Pengelompokan Standar)
+        const { data: rawPending } = await supabaseClient.from('daily_task_logs')
+            .select('*')
+            .eq('pic_id', user.id)
+            .eq('is_completed', false)
+            .order('task_date', { ascending: true });
+
+        const { data: allMasterTasks } = await supabaseClient.from('employee_tasks')
+            .select('id, schedule_type, task_type')
+            .eq('pic_id', user.id);
+
+        let grouped = { harian: [], sekali: [], mingguan: [], bulanan: [] };
+        
+        (rawPending || []).forEach(task => {
+            const master = (allMasterTasks || []).find(m => m.id === task.task_id);
+            const schedType = master ? master.schedule_type : 'harian';
+            const taskType = master ? master.task_type : 'rutin';
+
+            if (taskType === 'sekali') grouped.sekali.push(task);
+            else if (schedType === 'mingguan' && isSameWeek(task.task_date)) grouped.mingguan.push(task);
+            else if (schedType === 'bulanan' && isSameMonth(task.task_date)) grouped.bulanan.push(task);
+            else if (schedType === 'harian' && task.task_date <= todayStr) grouped.harian.push(task);
+            
+            // Evaluasi Tunggakan
+            if (task.task_date < todayStr && schedType === 'mingguan' && !isSameWeek(task.task_date)) grouped.mingguan.push(task);
+            if (task.task_date < todayStr && schedType === 'bulanan' && !isSameMonth(task.task_date)) grouped.bulanan.push(task);
+        });
+
+        let hasTasks = grouped.harian.length + grouped.mingguan.length + grouped.bulanan.length + grouped.sekali.length > 0;
+
+        if (user.wa_number && hasTasks) {
+            let waText = `*DAFTAR TUGAS ANDA*\nHalo ${user.name},\nSelamat bekerja! Berikut adalah daftar tugas yang *belum selesai* untuk periode ini:\n\n`;
+            const groupTitles = { harian: 'Harian', sekali: 'Sekali', mingguan: 'Mingguan', bulanan: 'Bulanan' };
+
+            for (const key of ['harian', 'sekali', 'mingguan', 'bulanan']) {
+                if (grouped[key].length > 0) {
+                    waText += `*📁 Tugas ${groupTitles[key]}*\n`;
+                    grouped[key].forEach((t, index) => { 
+                        let dateInfo = "";
+                        if (t.task_date < todayStr) dateInfo = " [Tunggakan]";
+                        else if (key !== 'harian') dateInfo = ` [Target: ${formatWaDate(t.task_date)}]`;
+                        waText += `${index + 1}. ${t.task_name}${dateInfo}\n`; 
+                    });
+                    waText += `\n`;
+                }
+            }
+            waText += `_Buka aplikasi untuk melihat status lengkap dan menandai jika sudah dikerjakan._`;
+
+            fetch('https://api.fonnte.com/send', {
+                method: 'POST',
+                headers: { 'Authorization': 'cAswYc8237BQhnuGWdBE', 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ target: user.wa_number, message: waText })
+            }).catch(e => console.error("Gagal kirim WA", e));
+        }
+    } catch (err) {
+        console.error("Sistem Tugas Gagal Memproses:", err);
+    }
+}
+
+function formatWaDate(dateStr) {
+    const [y, m, d] = dateStr.split('-');
+    return `${parseInt(d)}/${parseInt(m)}`;
+}
+
+let realtimeTaskSubscription = null;
+
+function initRealtimeTasks(user) {
+    // Jika sudah ada listener aktif, matikan dulu agar tidak dobel
+    if (realtimeTaskSubscription) supabaseClient.removeChannel(realtimeTaskSubscription);
+    
+    // Subscribe ke penambahan data baru di tabel employee_tasks
+    realtimeTaskSubscription = supabaseClient
+        .channel('public:employee_tasks')
+        .on('postgres_changes', { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'employee_tasks',
+            filter: `pic_id=eq.${user.id}` // Hanya dengarkan tugas untuk karyawan yang sedang login
+        }, async (payload) => {
+            console.log('Tugas baru ditambahkan via database!', payload);
+            
+            // Proses generate log seketika itu juga (Melewati pengiriman WA otomatis dari aplikasi)
+            await generateAndSendDailyTasks(user, true); 
+            
+            // Perbarui UI jika karyawan sedang berada di tab tugas
+            const taskContent = UI.el('tab-content-tasks');
+            if (taskContent && !taskContent.classList.contains('hidden')) {
+                loadDailyTasks();
+            } else {
+                // Notifikasi visual di dalam aplikasi jika karyawan sedang di menu absensi / kalender
+                showToast("Tugas Baru Diterima", "Sistem admin baru saja menambahkan tugas baru.", "info");
+            }
+        })
+        .subscribe();
+}
+
+function removeRealtimeTasks() {
+    if (realtimeTaskSubscription) {
+        supabaseClient.removeChannel(realtimeTaskSubscription);
+        realtimeTaskSubscription = null;
+    }
+}
 
     function turnOffCamera() {
         const videoEl = UI.el('camera-stream');
@@ -1131,7 +1537,7 @@ let tempAppWaNumber = null;
                     }
                     const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
                     await apiService.createRecord(res.user.code, res.user.name, time);
-
+await generateAndSendDailyTasks(res.user);
                     sebutkanNama(`Selamat bekerja, ${res.user.username}`);
                     showToast("Berhasil Masuk!", `Selamat bekerja, ${res.user.name}. Waktu: ${time}`, "success");
                     e.target.value = ""; 
@@ -1174,6 +1580,24 @@ let tempAppWaNumber = null;
         const fallbackName = cachedRecords.find(r => r.employeeCode === code)?.employeeName || "Karyawan";
         const name = this.dataset.name || fallbackName;
         if (!code) return;
+
+        // --- VALIDASI TUGAS (DIPERBARUI) ---
+        const todayStr = getLocalDateString();
+        const { data: unfinishedTasks } = await supabaseClient.from('daily_task_logs')
+            .select('id').eq('pic_id', currentUser.id).eq('task_date', todayStr).eq('is_completed', false);
+            
+        if (unfinishedTasks && unfinishedTasks.length > 0) {
+            // Menampilkan pop-up peringatan, bukan error yang memblokir
+            const lanjutPulang = confirm("Masih ada tugas yang belum ditandai selesai hari ini. Apakah Anda yakin tetap ingin absen pulang?");
+            
+            if (!lanjutPulang) {
+                // Jika karyawan memilih "Batal" (Cancel)
+                switchAppTab('tasks'); 
+                return; 
+            }
+            // Jika memilih "OK", proses akan lanjut ke pengambilan foto ke bawah
+        }
+        // --- AKHIR VALIDASI TUGAS ---
 
         const imageBlob = await startCountdownAndSnap();
         if (!imageBlob) return; 
@@ -1306,6 +1730,8 @@ async function checkLoginState(isAfterLogout = false) {
             const storedSlips = JSON.parse(localStorage.getItem('attendance_slips') || '[]');
             initDashboard(currentUser, storedSlips);
 
+            initRealtimeTasks(currentUser);
+
             UI.el('welcome-message').textContent = `Halo, ${currentUser.name}!`;
             
             const today = getLocalDateString();
@@ -1417,6 +1843,8 @@ async function checkLoginState(isAfterLogout = false) {
         sessionStorage.removeItem('app_unlocked');
         showToast("Logout", "Anda telah keluar ke mode manual.", "info");
         
+        removeRealtimeTasks();
+        
         UI.el('slips-container').innerHTML = '';
         UI.el('calendarView').innerHTML = '';
         UI.el('attendanceSummary').innerText = '-';
@@ -1435,7 +1863,7 @@ async function checkLoginState(isAfterLogout = false) {
         await withLoading('btn-auto-check-in', 'Menyimpan...', async () => {
             const time = new Date().toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
             await apiService.createRecord(currentUser.code, currentUser.name, time);
-            
+            await generateAndSendDailyTasks(currentUser);
             sebutkanNama(`Selamat bekerja, ${currentUser.username}`);
             showToast("Berhasil Masuk!", `Selamat bekerja. Waktu: ${time}`, "success");
             
@@ -1960,7 +2388,7 @@ async function checkLoginState(isAfterLogout = false) {
             if (count > 0) {
                 fetch('https://api.fonnte.com/send', {
                     method: 'POST', headers: { 'Authorization': 'cAswYc8237BQhnuGWdBE', 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ target: '120363421730994663@g.us', message: msg + "\n_Pesan dikirim manual_\n\nCc: @6281355730352" })
+                    body: newSearchParams({ target: '120363421730994663@g.us', message: msg + "\n_Pesan dikirim manual_\n\nCc: @6281355730352" })
                 });
             } else alert("Tidak ada karyawan part-time.");
             alert("Pesan rekap jadwal berhasil dikirim!"); updateManualButtonState();
