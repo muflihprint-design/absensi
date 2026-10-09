@@ -1001,7 +1001,7 @@ async function generateAndSendDailyTasks(user, skipWa = false) {
 
             fetch('https://api.fonnte.com/send', {
                 method: 'POST',
-                headers: { 'Authorization': 'cAswYc8237BQhnuGWdBE', 'Content-Type': 'application/x-www-form-urlencoded' },
+                headers: { 'Authorization': 'AiHV4a6BXReg6pGaariC', 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ target: user.wa_number, message: waText })
             }).catch(e => console.error("Gagal kirim WA", e));
         }
@@ -1946,7 +1946,7 @@ async function checkLoginState(isAfterLogout = false) {
         tempOtpTimestamp = Date.now();
 
         const waText = `*KODE OTP APLIKASI ABSENSI VIP PLUS*\n\nHalo ${tempOtpUser.name},\nKode OTP Anda untuk reset password adalah: *${tempOtpCode}*\n\n_Catatan: Kode ini hanya berlaku selama 5 menit._`;
-        const fonnteToken = 'cAswYc8237BQhnuGWdBE';
+        const fonnteToken = 'AiHV4a6BXReg6pGaariC';
 
         await fetch('https://api.fonnte.com/send', {
             method: 'POST',
@@ -2387,7 +2387,7 @@ async function checkLoginState(isAfterLogout = false) {
             localStorage.setItem('lastManualSendDate', getTodayDateString());
             if (count > 0) {
                 fetch('https://api.fonnte.com/send', {
-                    method: 'POST', headers: { 'Authorization': 'cAswYc8237BQhnuGWdBE', 'Content-Type': 'application/x-www-form-urlencoded' },
+                    method: 'POST', headers: { 'Authorization': 'AiHV4a6BXReg6pGaariC', 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: newSearchParams({ target: '120363421730994663@g.us', message: msg + "\n_Pesan dikirim manual_\n\nCc: @6281355730352" })
                 });
             } else alert("Tidak ada karyawan part-time.");
@@ -2520,7 +2520,7 @@ async function checkLoginState(isAfterLogout = false) {
         
         try {
             await fetch('https://api.fonnte.com/send', {
-                method: 'POST', headers: { 'Authorization': 'cAswYc8237BQhnuGWdBE', 'Content-Type': 'application/x-www-form-urlencoded' },
+                method: 'POST', headers: { 'Authorization': 'AiHV4a6BXReg6pGaariC', 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ target: targetNumber, message: waText })
             });
 
